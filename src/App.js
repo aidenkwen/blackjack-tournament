@@ -6,7 +6,7 @@ import AddTournamentPage from './components/pages/AddTournamentPage';
 import ManageTournamentsPage from './components/pages/ManageTournamentsPage';
 import RegistrationPage from './components/pages/RegistrationPage';
 import SeatingAssignmentPage from './components/pages/SeatingAssignmentPage';
-import TablingPage from './components/pages/TablingPage';
+import TablingManagement from './components/pages/TablingManagement';
 import ExportPage from './components/pages/ExportPage';
 
 const App = () => {
@@ -142,6 +142,8 @@ const App = () => {
           setLastSelectedRound={setLastSelectedRound}
           lastSelectedTimeSlot={lastSelectedTimeSlot}
           setLastSelectedTimeSlot={setLastSelectedTimeSlot}
+          globalDisabledTables={globalDisabledTables}
+          setGlobalDisabledTables={setGlobalDisabledTables}
         />
       )}
       {currentPage === 2 && (
@@ -159,16 +161,14 @@ const App = () => {
         />
       )}
       {currentPage === 2.5 && (
-        <TablingPage
+        <TablingManagement
           selectedEvent={selectedEvent}
           tournaments={tournaments}
           registrations={registrations}
           setRegistrations={setRegistrations}
-          lastRegisteredPlayer={lastRegisteredPlayer}
-          pendingRegistration={pendingRegistration}
-          setCurrentPage={setCurrentPage}
           globalDisabledTables={globalDisabledTables}
           setGlobalDisabledTables={setGlobalDisabledTables}
+          onBack={() => setCurrentPage(1)}
         />
       )}
       {currentPage === 3 && (

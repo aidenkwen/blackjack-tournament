@@ -403,3 +403,19 @@ body {
   color: #ffffff;
   box-shadow: inset 0 0 0 2px #a10000;
 }
+
+/* Consistent page header structure */
+.page-header {
+  margin-top: 32px;
+  margin-bottom: 32px;
+}
+
+.page-header .page-title {
+  margin: 0 0 8px 0;
+}
+
+.page-header .page-subtitle {
+  margin: 0;
+  font-size: 1rem;
+  color: #666666;
+}

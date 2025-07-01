@@ -50,6 +50,11 @@ const PaymentCard = ({
         }
       }
     }
+    
+    // If switching payment type and it matches the second payment type, clear the second payment type
+    if (splitPayment && newPaymentType === paymentType2) {
+      setPaymentType2('');
+    }
   };
 
   const getAvailablePaymentTypes = () => {
@@ -59,6 +64,11 @@ const PaymentCard = ({
       return ['Cash', 'Credit', 'Chips'];
     }
     return getPaymentTypes ? getPaymentTypes() : ['Cash', 'Credit', 'Chips', 'Comp'];
+  };
+
+  // Get available payment types for second payment (excluding the first selection)
+  const getAvailablePaymentTypes2 = () => {
+    return ['Cash', 'Credit', 'Chips'].filter(type => type !== paymentType);
   };
 
   const isPaymentAmountDisabled = () => {
@@ -71,7 +81,7 @@ const PaymentCard = ({
 
   const rounds = [
     { key: 'round1', name: 'Round 1', isRebuy: false, timeSlots: 6 },
-    { key: 'rebuy1', name: 'Rebuy 1', isRebuy: true, timeSlots: 1 },
+    { key: 'rebuy1', name: 'Rebuy 1', isRebuy: true, timeSlots: 2 },
     { key: 'rebuy2', name: 'Rebuy 2', isRebuy: true, timeSlots: 1 },
     { key: 'round2', name: 'Round 2', isRebuy: false, timeSlots: 3 },
     { key: 'superrebuy', name: 'Super Rebuy', isRebuy: true, timeSlots: 2 },
@@ -149,9 +159,11 @@ const PaymentCard = ({
                 className="select-field"
               >
                 <option value="">-- Select payment type --</option>
-                <option value="Cash">Cash</option>
-                <option value="Credit">Credit</option>
-                <option value="Chips">Chips</option>
+                {getAvailablePaymentTypes2().map(type => (
+                  <option key={type} value={type}>
+                    {type}
+                  </option>
+                ))}
               </select>
             </div>
           </div>

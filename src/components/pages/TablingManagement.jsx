@@ -4,6 +4,8 @@ import PlayerSeatEdit from './PlayerSeatEdit';
 
 const TablingManagement = ({
   tournament,
+  selectedEvent,
+  tournaments,
   registrations,
   setRegistrations,
   globalDisabledTables,
@@ -12,7 +14,31 @@ const TablingManagement = ({
 }) => {
   const [activeTab, setActiveTab] = useState('tabling');
 
-  const tournamentRegistrations = registrations.filter(r => r.eventName === tournament.name);
+  // Get current tournament info - handle both scenarios
+  const getCurrentTournament = () => {
+    // If tournament prop is passed directly (from ManageTournamentsPage), use it
+    if (tournament) {
+      return tournament;
+    }
+    
+    // Otherwise, find tournament by selectedEvent (from Registration page)
+    if (!selectedEvent) {
+      return { name: 'Unknown Tournament', entryCost: 500, rebuyCost: 500, mulliganCost: 100 };
+    }
+    
+    const defaultTournament = { name: selectedEvent, entryCost: 500, rebuyCost: 500, mulliganCost: 100 };
+    
+    if (!tournaments || !Array.isArray(tournaments)) {
+      return defaultTournament;
+    }
+    
+    const customTournament = tournaments.find(t => t.name === selectedEvent);
+    return customTournament || defaultTournament;
+  };
+
+  const currentTournament = getCurrentTournament();
+  const eventName = currentTournament.name || selectedEvent;
+  const tournamentRegistrations = registrations.filter(r => r.eventName === eventName);
 
   // Calculate payment totals
   const calculatePaymentTotals = () => {
@@ -46,12 +72,14 @@ const TablingManagement = ({
   return (
     <div className="container">
       <button onClick={onBack} className="link-back link-back-block">
-        {'<'} Back to Tournaments
+        {'<'} Back to Registration
       </button>
 
-      <h1 className="page-title">{tournament.name} / Seating Management</h1>
+      <div className="page-header">
+        <h1 className="page-title">{eventName} / Player Seating</h1>
+      </div>
 
-      {/* Payment Summary */}
+      {/* Payment Details */}
       <div style={{ 
         marginBottom: '24px', 
         padding: '16px', 
@@ -59,7 +87,7 @@ const TablingManagement = ({
         border: '1px solid #ddd', 
         borderRadius: '4px' 
       }}>
-        <h3 style={{ margin: '0 0 12px 0', fontSize: '1.1rem' }}>Revenue Summary</h3>
+        <h3 style={{ margin: '0 0 12px 0', fontSize: '1.1rem' }}>Payment Breakdown</h3>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap' }}>
           <div style={{ display: 'flex', gap: '24px', flexWrap: 'wrap' }}>
             {Object.entries(paymentTotals).map(([paymentType, total]) => (
@@ -71,13 +99,6 @@ const TablingManagement = ({
                 {paymentType}: ${total.toLocaleString()}
               </div>
             ))}
-          </div>
-          <div style={{ 
-            fontSize: '1rem', 
-            fontWeight: 'bold', 
-            color: '#8b0000' 
-          }}>
-            Total: ${Object.values(paymentTotals).reduce((sum, amount) => sum + amount, 0).toLocaleString()}
           </div>
         </div>
       </div>
@@ -99,7 +120,7 @@ const TablingManagement = ({
 
       {activeTab === 'tabling' && (
         <TablingOverview
-          tournament={tournament}
+          tournament={currentTournament}
           registrations={tournamentRegistrations}
           setRegistrations={setRegistrations}
           allRegistrations={registrations}
@@ -110,7 +131,7 @@ const TablingManagement = ({
 
       {activeTab === 'player-edit' && (
         <PlayerSeatEdit
-          tournament={tournament}
+          tournament={currentTournament}
           registrations={tournamentRegistrations}
           setRegistrations={setRegistrations}
           allRegistrations={registrations}

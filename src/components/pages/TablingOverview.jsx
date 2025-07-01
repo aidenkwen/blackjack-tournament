@@ -13,7 +13,7 @@ const TablingOverview = ({
 
   const rounds = [
     { key: 'round1', name: 'Round 1', timeSlots: 6 },
-    { key: 'rebuy1', name: 'Rebuy 1', timeSlots: 1 },
+    { key: 'rebuy1', name: 'Rebuy 1', timeSlots: 2 },
     { key: 'rebuy2', name: 'Rebuy 2', timeSlots: 1 },
     { key: 'round2', name: 'Round 2', timeSlots: 3 },
     { key: 'superrebuy', name: 'Super Rebuy', timeSlots: 2 },
@@ -56,8 +56,6 @@ const TablingOverview = ({
     );
   };
 
-  // Removed unused functions: getSeatedPlayers, assignRandomSeat, removePlayer
-
   return (
     <div>
       <div style={{ display: 'flex', gap: '16px', marginBottom: '24px' }}>
@@ -93,10 +91,6 @@ const TablingOverview = ({
             ))}
           </select>
         </div>
-      </div>
-
-      <div style={{ marginBottom: '16px' }}>
-        {/* Removed Assign Random Player button and seated players count */}
       </div>
 
       {/* Tables Layout - Updated styling with global state */}

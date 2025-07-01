@@ -15,6 +15,11 @@ const MulliganCard = ({
   setMulliganAmount2,
   currentTournament
 }) => {
+  // Get available payment types for second mulligan payment (excluding the first selection)
+  const getAvailableMulliganPaymentTypes2 = () => {
+    return ['Cash', 'Credit', 'Chips'].filter(type => type !== mulliganPaymentType);
+  };
+
   return (
     <div className="card mb-4">
       <div className="card-title">Mulligan</div>
@@ -38,7 +43,13 @@ const MulliganCard = ({
                 <label className="mb-2">Mulligan Payment Type</label>
                 <select
                   value={mulliganPaymentType}
-                  onChange={(e) => setMulliganPaymentType(e.target.value)}
+                  onChange={(e) => {
+                    setMulliganPaymentType(e.target.value);
+                    // If switching payment type and it matches the second payment type, clear the second payment type
+                    if (splitMulliganPayment && e.target.value === mulliganPaymentType2) {
+                      setMulliganPaymentType2('');
+                    }
+                  }}
                   className="select-field"
                 >
                   <option value="">-- Select payment type --</option>
@@ -88,12 +99,8 @@ const MulliganCard = ({
                     className="select-field"
                   >
                     <option value="">-- Select payment type --</option>
-                    {['Cash', 'Credit', 'Chips'].map((type) => (
-                      <option
-                        key={type}
-                        value={type}
-                        disabled={type === mulliganPaymentType}
-                      >
+                    {getAvailableMulliganPaymentTypes2().map((type) => (
+                      <option key={type} value={type}>
                         {type}
                       </option>
                     ))}
