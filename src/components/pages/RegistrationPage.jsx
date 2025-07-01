@@ -667,9 +667,11 @@ const RegistrationPage = ({
       </div>
       {showSearchBar && (<SearchBar searchValue={searchAccount} onSearchChange={setSearchAccount} onSearch={searchPlayer} placeholder="Enter 14-digit Player Account Number"/>)}
       {!showSearchBar && (
-        <div style={{ padding: '16px', backgroundColor: '#f5f5f5', border: '1px solid #ddd', borderRadius: '4px', marginBottom: '16px', textAlign: 'center', color: '#666' }}>
-          {activeTab === 'registration' ? 'Please select a time slot to begin player registration.' : 'Please select both a round and time slot to begin post-registration.'}
-        </div>
+        <p className="subheading" style={{ textAlign: 'center' }}>
+          {activeTab === 'registration'
+            ? 'Please select a time slot to begin player registration.'
+            : 'Please select both a round and time slot to begin post-registration.'}
+        </p>
       )}
       {showLastPlayer && showSearchBar && <LastPlayerCard lastPlayer={lastPlayer} showSeatingInfo={true} />}
       {showNewPlayerForm && (<NewPlayerForm accountNumber={searchAccount} currentTournament={currentTournament} onSave={handleNewPlayerSave} onCancel={handleNewPlayerCancel} selectedEvent={selectedEvent} employee={employee} host={host} setHost={setHost} comments={comments} setComments={setComments} canRegisterForRound1={canAddNewPlayers()}/>)}

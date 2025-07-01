@@ -121,7 +121,9 @@ const ExportPage = ({ selectedEvent, employee, masterData, registrations, setCur
         {'<'} Back to Registration
       </button>
 
-      <h1 className="page-title">{selectedEvent} / Export Data</h1>
+      <div className="page-header">
+        <h1 className="page-title">{selectedEvent} / Export Data</h1>
+      </div>
 
       <div className="form-group">
         <label className="mb-2">Export Type</label>
