@@ -1,21 +1,16 @@
 import React, { useState } from 'react';
 
-const SeatingAssignmentPage = ({ 
+const TablingPage = ({ 
   selectedEvent, 
   tournaments, 
   registrations, 
   setRegistrations, 
-  lastRegisteredPlayer,
-  pendingRegistration,
-  setPendingRegistration,
   setCurrentPage,
   globalDisabledTables,
   setGlobalDisabledTables
 }) => {
-  const [selectedSeat, setSelectedSeat] = useState(null);
-  const [confirming, setConfirming] = useState(false);
-  const [seatPreferences, setSeatPreferences] = useState([]);
-  const [conflictTables, setConflictTables] = useState(new Set());
+  const [selectedRound, setSelectedRound] = useState('round1');
+  const [selectedTimeSlot, setSelectedTimeSlot] = useState(1);
 
   const rounds = [
     { key: 'round1', name: 'Round 1', timeSlots: 6 },
@@ -27,187 +22,57 @@ const SeatingAssignmentPage = ({
     { key: 'semifinals', name: 'Semifinals', timeSlots: 1 }
   ];
 
-  if (!lastRegisteredPlayer || !pendingRegistration) {
-    return (
-      <div className="container">
-        <button
-          onClick={() => setCurrentPage(1)}
-          className="link-back link-back-block"
-        >
-          {'<'} Back to Registration
-        </button>
-        <h1 className="page-title">No Player to Assign</h1>
-        <p>No pending player registration found. Please register a player first.</p>
-      </div>
-    );
-  }
-
-  const currentRound = rounds.find(r => r.key === lastRegisteredPlayer.round);
+  const currentRound = rounds.find(r => r.key === selectedRound);
+  const availableTimeSlots = Array.from({ length: currentRound?.timeSlots || 1 }, (_, i) => i + 1);
 
   const getDisabledKey = (round, timeSlot, tableNumber) => `${selectedEvent}-${round}-${timeSlot}-${tableNumber}`;
 
-  const isTableConflicted = (tableNumber) => {
-    return conflictTables.has(tableNumber);
+  const toggleTable = (tableNumber) => {
+    // Check if table has any players before allowing disable
+    const hasPlayers = [1, 2, 3, 4, 5, 6].some(seat => getPlayerAtSeat(tableNumber, seat));
+    
+    if (hasPlayers) {
+      alert('Cannot disable table - players are currently seated at this table.');
+      return;
+    }
+
+    const key = getDisabledKey(selectedRound, selectedTimeSlot, tableNumber);
+    setGlobalDisabledTables(prev => ({
+      ...prev,
+      [key]: !prev[key]
+    }));
   };
 
   const isTableDisabled = (tableNumber) => {
-    const key = getDisabledKey(lastRegisteredPlayer.round, lastRegisteredPlayer.timeSlot, tableNumber);
+    const key = getDisabledKey(selectedRound, selectedTimeSlot, tableNumber);
     return globalDisabledTables[key] || false;
   };
 
-  const isTableUnavailable = (tableNumber) => {
-    return isTableDisabled(tableNumber) || isTableConflicted(tableNumber);
+  const getSeatedPlayers = () => {
+    return registrations.filter(r => 
+      r.eventName === selectedEvent &&
+      r.round === selectedRound && 
+      r.timeSlot === selectedTimeSlot &&
+      r.tableNumber && 
+      r.seatNumber
+    );
   };
 
   const getPlayerAtSeat = (tableNumber, seatNumber) => {
     return registrations.find(r =>
       r.eventName === selectedEvent &&
-      r.round === lastRegisteredPlayer.round &&
-      r.timeSlot === lastRegisteredPlayer.timeSlot &&
+      r.round === selectedRound &&
+      r.timeSlot === selectedTimeSlot &&
       r.tableNumber === tableNumber &&
       r.seatNumber === seatNumber
     );
   };
 
-  const getAvailableSeats = () => {
-    const availableSeats = [];
-    for (let table = 1; table <= 6; table++) {
-      if (!isTableUnavailable(table)) {
-        for (let seat = 1; seat <= 6; seat++) {
-          if (!getPlayerAtSeat(table, seat)) {
-            // If seat preferences are set, only include preferred seats
-            if (seatPreferences.length > 0) {
-              if (seatPreferences.includes(seat)) {
-                availableSeats.push({ table, seat });
-              }
-            } else {
-              // If no preferences, include all available seats
-              availableSeats.push({ table, seat });
-            }
-          }
-        }
-      }
-    }
-    return availableSeats;
-  };
-
-  const assignRandomSeat = () => {
-    const availableSeats = getAvailableSeats();
-    
-    if (availableSeats.length === 0) {
-      if (seatPreferences.length > 0) {
-        alert(`No available seats matching your preferences (seats ${seatPreferences.join(', ')}) in this round/time slot.`);
-      } else {
-        alert('No available seats in this round/time slot.');
-      }
-      return;
-    }
-
-    const randomSeat = availableSeats[Math.floor(Math.random() * availableSeats.length)];
-    setSelectedSeat(randomSeat);
-  };
-
-  const toggleSeatPreference = (seatNumber) => {
-    setSeatPreferences(prev => {
-      if (prev.includes(seatNumber)) {
-        return prev.filter(seat => seat !== seatNumber);
-      } else {
-        return [...prev, seatNumber].sort();
-      }
-    });
-  };
-
-  const toggleConflictTable = (tableNumber) => {
-    setConflictTables(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(tableNumber)) {
-        newSet.delete(tableNumber);
-      } else {
-        newSet.add(tableNumber);
-      }
-      return newSet;
-    });
-  };
-
-  const handlePlayerClick = (player, tableNumber) => {
-    // Only allow clicking on existing players to mark conflicts
-    if (player && !confirming) {
-      toggleConflictTable(tableNumber);
-    }
-  };
-
-  const selectSeat = (tableNumber, seatNumber) => {
-    if (getPlayerAtSeat(tableNumber, seatNumber) || isTableUnavailable(tableNumber)) {
-      return; // Seat is occupied or table is unavailable
-    }
-    setSelectedSeat({ table: tableNumber, seat: seatNumber });
-  };
-
-  const confirmAssignment = () => {
-    if (!selectedSeat) {
-      alert('Please select a seat first.');
-      return;
-    }
-
-    setConfirming(true);
-
-    // Update existing registrations with seating information instead of adding new ones
-    const updatedRegistrations = registrations.map(r => {
-      // Find registrations that match the pending registration criteria
-      if (pendingRegistration && pendingRegistration.registrations) {
-        const matchingPendingReg = pendingRegistration.registrations.find(pendingReg => 
-          pendingReg.playerAccountNumber === r.playerAccountNumber &&
-          pendingReg.eventType === r.eventType &&
-          pendingReg.isRebuy === r.isRebuy &&
-          pendingReg.isMulligan === r.isMulligan &&
-          Math.abs(new Date(pendingReg.registrationDate).getTime() - new Date(r.registrationDate).getTime()) < 5000 // Within 5 seconds
-        );
-        
-        if (matchingPendingReg) {
-          return {
-            ...r,
-            round: lastRegisteredPlayer.round,
-            timeSlot: lastRegisteredPlayer.timeSlot,
-            tableNumber: selectedSeat.table,
-            seatNumber: selectedSeat.seat
-          };
-        }
-      }
-      
-      // Fallback for existing registrations without seating
-      if (r.playerAccountNumber === lastRegisteredPlayer.playerAccountNumber &&
-          r.eventName === selectedEvent &&
-          (!r.tableNumber || !r.seatNumber)) {
-        return {
-          ...r,
-          round: lastRegisteredPlayer.round,
-          timeSlot: lastRegisteredPlayer.timeSlot,
-          tableNumber: selectedSeat.table,
-          seatNumber: selectedSeat.seat
-        };
-      }
-      
-      return r;
-    });
-
-    setRegistrations(updatedRegistrations);
-
-    // Show confirmation and navigate back
-    alert(`${lastRegisteredPlayer.firstName} ${lastRegisteredPlayer.lastName} assigned to Table ${selectedSeat.table}, Seat ${selectedSeat.seat}`);
-    
-    // Clear pending registration after successful completion and navigate
-    setPendingRegistration(null);
-    setCurrentPage(1);
-    
-    setConfirming(false);
-  };
-  
   return (
     <div className="container">
       <button
         onClick={() => setCurrentPage(1)}
         className="link-back link-back-block"
-        disabled={confirming}
       >
         {'<'} Back to Registration
       </button>
@@ -222,116 +87,52 @@ const SeatingAssignmentPage = ({
           marginLeft: '16px',
           fontWeight: '500' 
         }}>
-          {currentRound?.name} - Time Slot {lastRegisteredPlayer.timeSlot}
+          {currentRound?.name} - Time Slot {selectedTimeSlot}
         </span>
       </div>
 
-      {/* Player Info with Seat Preferences */}
-      <div style={{ marginBottom: '24px' }}>
-        <div style={{ 
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'flex-start',
-          gap: '24px',
-          marginBottom: '8px'
-        }}>
-          <h3 style={{ margin: '0' }}>
-            <span style={{ fontWeight: 'bold' }}>{lastRegisteredPlayer.firstName} {lastRegisteredPlayer.lastName}</span>
-          </h3>
+      <div style={{ display: 'flex', gap: '16px', marginBottom: '24px' }}>
+        <div className="form-group" style={{ flex: 1 }}>
+          <label className="mb-2">Round</label>
+          <select
+            value={selectedRound}
+            onChange={(e) => {
+              setSelectedRound(e.target.value);
+              setSelectedTimeSlot(1);
+            }}
+            className="select-field"
+          >
+            {rounds.map(round => (
+              <option key={round.key} value={round.key}>
+                {round.name}
+              </option>
+            ))}
+          </select>
         </div>
-        
-        <div style={{ 
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          gap: '24px'
-        }}>
-          <p style={{ margin: '0', color: '#666' }}>
-            Account: {lastRegisteredPlayer.playerAccountNumber}
-          </p>
-          
-          {/* Seat Preferences */}
-          <div style={{ flex: 'none' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <span style={{ margin: '0 0 4px 0', color: '#666' }}>
-                Seat Preferences (optional):
-              </span>
-              {[1, 2, 3, 4, 5, 6].map(seatNum => (
-                <label 
-                  key={seatNum}
-                  style={{ 
-                    display: 'flex', 
-                    alignItems: 'center',
-                    gap: '4px',
-                    cursor: 'pointer',
-                    fontSize: '0.85rem',
-                    color: '#666'
-                  }}
-                >
-                  <input
-                    type="checkbox"
-                    checked={seatPreferences.includes(seatNum)}
-                    onChange={() => toggleSeatPreference(seatNum)}
-                    disabled={confirming}
-                  />
-                  {seatNum}
-                </label>
-              ))}
-            </div>
-          </div>
+
+        <div className="form-group" style={{ flex: 1 }}>
+          <label className="mb-2">Time Slot</label>
+          <select
+            value={selectedTimeSlot}
+            onChange={(e) => setSelectedTimeSlot(parseInt(e.target.value))}
+            className="select-field"
+          >
+            {availableTimeSlots.map(slot => (
+              <option key={slot} value={slot}>
+                Slot {slot}
+              </option>
+            ))}
+          </select>
         </div>
       </div>
 
-      {/* Assignment Controls - Top row layout */}
-      <div style={{ 
-        marginBottom: '24px', 
-        display: 'flex', 
-        justifyContent: 'space-between', 
-        alignItems: 'center',
-        gap: '16px'
-      }}>
-        <button
-          onClick={assignRandomSeat}
-          className="btn btn-primary"
-          disabled={confirming}
-        >
-          {seatPreferences.length > 0 
-            ? `Assign Random Seat (${seatPreferences.join(', ')})` 
-            : 'Assign Random Seat'
-          }
-        </button>
-        
-        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-          <button
-            onClick={confirmAssignment}
-            className="btn btn-success"
-            disabled={confirming || !selectedSeat}
-            style={{
-              opacity: (!selectedSeat || confirming) ? 0.5 : 1,
-              cursor: (!selectedSeat || confirming) ? 'not-allowed' : 'pointer'
-            }}
-          >
-            {confirming ? 'Confirming...' : selectedSeat ? `Confirm: Table ${selectedSeat.table}, Seat ${selectedSeat.seat}` : 'Confirm: Select a Seat'}
-          </button>
-          <button
-            onClick={() => setSelectedSeat(null)}
-            className="btn btn-secondary"
-            disabled={confirming || !selectedSeat}
-            style={{
-              opacity: (!selectedSeat || confirming) ? 0.5 : 1,
-              cursor: (!selectedSeat || confirming) ? 'not-allowed' : 'pointer'
-            }}
-          >
-            Clear Selection
-          </button>
-        </div>
+      <div style={{ marginBottom: '16px' }}>
+        <span style={{ color: '#666', fontSize: '0.9rem' }}>
+          Seated Players: {getSeatedPlayers().length}
+        </span>
       </div>
 
-      <p style={{ color: '#666', fontSize: '0.9rem', marginBottom: '16px' }}>
-        Click on any empty seat to select it manually, or use the random assignment button. Click on existing players to mark conflict tables (prevents assignment to that table).
-      </p>
-
-      {/* Tables Layout - Updated styling */}
+      {/* Tables Layout */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
         {[1, 2, 3, 4, 5, 6].map(tableNumber => (
           <div 
@@ -340,18 +141,30 @@ const SeatingAssignmentPage = ({
               border: '1px solid #ddd', 
               borderRadius: '8px', 
               padding: '16px',
-              backgroundColor: '#f2f2f2' // Light grey table background
+              backgroundColor: '#f2f2f2'
             }}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-              <h3 style={{ margin: '0 0 0 0', fontSize: '1.1rem' }}>Table {tableNumber}</h3>
-              {/* No table disabling controls on seating assignment page */}
+              <h3 style={{ margin: 0, fontSize: '1.1rem' }}>Table {tableNumber}</h3>
+              <button
+                onClick={() => toggleTable(tableNumber)}
+                className={`btn ${isTableDisabled(tableNumber) ? 'btn-secondary' : 'btn-success'}`}
+                style={{ 
+                  fontSize: '0.8rem', 
+                  padding: '4px 8px',
+                  backgroundColor: isTableDisabled(tableNumber) ? '#666666' : '#8b0000',
+                  color: '#ffffff',
+                  border: 'none'
+                }}
+              >
+                {isTableDisabled(tableNumber) ? 'Disabled' : 'Active'}
+              </button>
             </div>
-            
+
             {isTableDisabled(tableNumber) ? (
               <div style={{ 
                 height: '80px', 
-                backgroundColor: '#666666', 
+                backgroundColor: '#666666',
                 border: '2px solid #ccc',
                 display: 'flex',
                 alignItems: 'center',
@@ -362,97 +175,39 @@ const SeatingAssignmentPage = ({
               }}>
                 Table Disabled
               </div>
-            ) : isTableConflicted(tableNumber) ? (
-              <div style={{ 
-                height: '80px', 
-                backgroundColor: '#666666', 
-                border: '2px solid #ccc',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: '#ffffff',
-                fontSize: '0.9rem',
-                fontWeight: 'bold',
-                cursor: 'pointer'
-              }}
-              onClick={() => toggleConflictTable(tableNumber)}
-              title="Click to remove conflict restriction"
-              >
-                Conflict of Interest (Click to Remove)
-              </div>
             ) : (
               <div style={{ display: 'flex', gap: '8px' }}>
                 {[1, 2, 3, 4, 5, 6].map(seatNumber => {
                   const player = getPlayerAtSeat(tableNumber, seatNumber);
-                  const isSelected = selectedSeat?.table === tableNumber && selectedSeat?.seat === seatNumber;
-                  
-                  let backgroundColor = '#ffffff'; // White seats
-                  let textColor = '#999';
-                  let cursor = 'pointer';
-                  let borderColor = '#ccc';
-                  
-                  if (player) {
-                    backgroundColor = '#666666'; // Dark grey for occupied
-                    textColor = '#ffffff'; // White text for occupied
-                    cursor = 'pointer'; // Allow clicking on players for conflict marking
-                    borderColor = '#ccc';
-                  } else if (isSelected) {
-                    backgroundColor = '#8b0000'; // Red for selected (new seating)
-                    textColor = '#ffffff';
-                    cursor = 'pointer';
-                    borderColor = '#8b0000';
-                  }
-                  
                   return (
                     <div
                       key={seatNumber}
-                      onClick={() => {
-                        if (player) {
-                          handlePlayerClick(player, tableNumber);
-                        } else if (!confirming) {
-                          selectSeat(tableNumber, seatNumber);
-                        }
-                      }}
                       style={{
                         minHeight: '60px',
                         minWidth: '80px',
-                        border: `2px solid ${borderColor}`,
+                        border: '2px solid #ccc',
                         borderRadius: '4px',
                         padding: '8px',
-                        backgroundColor,
-                        cursor: confirming ? 'not-allowed' : cursor,
+                        backgroundColor: player ? '#666666' : '#ffffff',
+                        cursor: 'default',
                         display: 'flex',
                         flexDirection: 'column',
                         justifyContent: 'center',
                         alignItems: 'center',
                         fontSize: '0.8rem',
                         textAlign: 'center',
-                        flex: 1,
-                        opacity: confirming ? 0.6 : 1
+                        flex: 1
                       }}
-                      title={
-                        player 
-                          ? `${player.firstName} ${player.lastName} - Click to mark conflict table` 
-                          : isSelected 
-                          ? 'Selected seat (new assignment) - click Confirm to assign'
-                          : 'Click to select this seat'
-                      }
                     >
-                      <div style={{ fontWeight: 'bold', marginBottom: '2px', color: textColor }}>
+                      <div style={{ fontWeight: 'bold', marginBottom: '2px', color: player ? '#ffffff' : '#000' }}>
                         Seat {seatNumber}
                       </div>
                       {player ? (
-                        <div style={{ color: textColor, fontSize: '0.75rem', fontWeight: 'bold' }}>
+                        <div style={{ color: '#ffffff', fontSize: '0.75rem', fontWeight: 'bold' }}>
                           {player.firstName} {player.lastName}
                         </div>
-                      ) : isSelected ? (
-                        <div style={{ color: textColor, fontSize: '0.75rem', fontWeight: 'bold' }}>
-                          SELECTED
-                        </div>
                       ) : (
-                        <div style={{ color: textColor }}>
-                          Available
-                        </div>
+                        <div style={{ color: '#999' }}>Empty</div>
                       )}
                     </div>
                   );
@@ -466,4 +221,4 @@ const SeatingAssignmentPage = ({
   );
 };
 
-export default SeatingAssignmentPage;
+export default TablingPage;

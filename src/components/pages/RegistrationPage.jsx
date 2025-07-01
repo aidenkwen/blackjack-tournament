@@ -922,10 +922,10 @@ const RegistrationPage = ({
           </div>
           <div style={{ display: 'flex', gap: '12px' }}>
             <button
-              onClick={() => setCurrentPage(2.5, true)}
+              onClick={() => setCurrentPage(2.5)}
               className="btn btn-white-red"
             >
-              Player Seating
+              View Seating
             </button>
             <button
               onClick={() => setCurrentPage(3, true)}
