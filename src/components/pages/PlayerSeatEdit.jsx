@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { UC } from '../../utils/formatting';
+import SearchBar from '../common/SearchBar';
 
 const PlayerSeatEdit = ({ 
   tournament, 
@@ -32,12 +33,6 @@ const PlayerSeatEdit = ({
   const isTableDisabled = (tableNumber, round, timeSlot) => {
     const key = getDisabledKey(round, timeSlot, tableNumber);
     return globalDisabledTables[key] || false;
-  };
-
-  const handleKeyPress = (e) => {
-    if (e.key === 'Enter') {
-      searchPlayers();
-    }
   };
 
   const searchPlayers = () => {
@@ -313,20 +308,17 @@ const PlayerSeatEdit = ({
       <div style={{ marginBottom: '24px' }}>
         <div className="form-group">
           <label className="mb-2">Search Player</label>
-          <div style={{ display: 'flex', gap: '12px' }}>
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(UC(e.target.value))}
-              onKeyPress={handleKeyPress}
-              className="input-field"
-              placeholder="Enter name or account number"
-              style={{ flex: 1 }}
-            />
-            <button onClick={searchPlayers} className="btn btn-primary">
-              Search
-            </button>
-          </div>
+          <SearchBar
+            searchValue={searchTerm}
+            onSearchChange={(value) => setSearchTerm(UC(value))}
+            onSearch={searchPlayers}
+            placeholder="Enter name, account number, or swipe card"
+            onCardSwipe={(cardNumber) => {
+              console.log('Card swiped in player search:', cardNumber);
+              setSearchTerm(UC(cardNumber));
+              setTimeout(() => searchPlayers(), 100);
+            }}
+          />
         </div>
       </div>
 
