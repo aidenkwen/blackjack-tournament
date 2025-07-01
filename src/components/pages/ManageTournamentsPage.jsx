@@ -76,13 +76,18 @@ const ManageTournamentsPage = ({
                 backgroundColor: selectedEvent === tournament.name ? '#f5f5f5' : '#f2f2f2',
                 borderColor: selectedEvent === tournament.name ? '#8b0000' : '#d9d9d9',
                 padding: '16px',
-                cursor: 'default' // Remove pointer cursor since clicking is handled by buttons
+                cursor: 'default'
               }}
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div style={{ flex: 1 }}>
                   <p style={{ margin: 0, fontWeight: 'bold', fontSize: '1.1rem' }}>
                     {tournament.name}
+                    {selectedEvent === tournament.name && (
+                      <span style={{ color: '#8b0000', fontSize: '0.85rem', fontWeight: '600', marginLeft: '8px' }}>
+                        (Currently Active)
+                      </span>
+                    )}
                   </p>
                   <p style={{ margin: '4px 0 0 0', color: '#666666', fontSize: '0.9rem' }}>
                     Entry: ${tournament.entryCost} • Rebuy: ${tournament.rebuyCost} • Mulligan: ${tournament.mulliganCost}
@@ -90,11 +95,6 @@ const ManageTournamentsPage = ({
                   {tournament.createdDate && (
                     <p style={{ margin: '4px 0 0 0', color: '#999999', fontSize: '0.8rem' }}>
                       Created: {new Date(tournament.createdDate).toLocaleDateString()}
-                    </p>
-                  )}
-                  {selectedEvent === tournament.name && (
-                    <p style={{ margin: '4px 0 0 0', color: '#8b0000', fontSize: '0.85rem', fontWeight: '600' }}>
-                      ✓ Currently Active
                     </p>
                   )}
                 </div>
@@ -111,23 +111,28 @@ const ManageTournamentsPage = ({
                     Manage Tabling
                   </button>
                   
-                  {selectedEvent !== tournament.name && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDeleteTournament(tournament);
-                      }}
-                      className="btn"
-                      style={{ 
-                        fontSize: '0.9rem',
-                        backgroundColor: '#8b0000',
-                        color: '#ffffff',
-                        border: 'none'
-                      }}
-                    >
-                      Delete Tournament
-                    </button>
-                  )}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (selectedEvent === tournament.name) {
+                        alert('Cannot delete the currently active tournament.');
+                        return;
+                      }
+                      handleDeleteTournament(tournament);
+                    }}
+                    className="btn"
+                    disabled={selectedEvent === tournament.name}
+                    style={{ 
+                      fontSize: '0.9rem',
+                      backgroundColor: selectedEvent === tournament.name ? '#cccccc' : '#8b0000',
+                      color: '#ffffff',
+                      border: 'none',
+                      cursor: selectedEvent === tournament.name ? 'not-allowed' : 'pointer',
+                      opacity: selectedEvent === tournament.name ? 0.6 : 1
+                    }}
+                  >
+                    Delete Tournament
+                  </button>
                 </div>
               </div>
             </div>
