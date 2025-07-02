@@ -125,13 +125,16 @@ const RegistrationPage = ({
   };
 
   const getPlayerEntryType = (playerAccountNumber) => {
-    // First, check the master data for the player's base entry type
-    const player = masterData.find(p => normalizeAccount(p.PlayerAccountNumber) === normalizeAccount(playerAccountNumber));
-    if (player && player.EntryType === 'COMP') {
-      return 'COMP';
+    // Only check master data for COMP status for Round 1 registration
+    // For other rounds, always treat as PAY (user must choose payment type)
+    if (activeTab === 'registration') {
+      const player = masterData.find(p => normalizeAccount(p.PlayerAccountNumber) === normalizeAccount(playerAccountNumber));
+      if (player && player.EntryType === 'COMP') {
+        return 'COMP';
+      }
     }
     
-    // If not COMP in master data, or no master data found, check registrations
+    // For post-registration rounds, check existing registrations
     const playerRegistrations = currentTournamentRegistrations
       .filter(r => normalizeAccount(r.playerAccountNumber) === normalizeAccount(playerAccountNumber))
       .sort((a, b) => new Date(b.registrationDate) - new Date(a.registrationDate));
@@ -146,11 +149,12 @@ const RegistrationPage = ({
 
   const shouldShowPaymentCard = () => {
     if (activeTab === 'registration') {
-      return true;
+      return true; // Always show payment card for Registration tab
     }
     if (activeTab === 'post-registration' && selectedRound) {
+      // For post-registration, only show payment card for rebuy rounds, NOT for round1
       const currentRoundInfo = rounds.find(r => r.key === selectedRound);
-      return currentRoundInfo?.isRebuy || selectedRound === 'round1';
+      return currentRoundInfo?.isRebuy; // Only rebuys get payment cards in post-registration
     }
     return false;
   };
@@ -301,7 +305,7 @@ const RegistrationPage = ({
       
       const playerEntryType = getPlayerEntryType(player.PlayerAccountNumber);
       
-      if (activeTab === 'registration' || (activeTab === 'post-registration' && selectedRound === 'round1')) {
+      if (activeTab === 'registration') {
         if (playerEntryType === 'COMP') {
           setPaymentType('Comp');
           setPaymentAmount('0');
@@ -310,9 +314,13 @@ const RegistrationPage = ({
           setPaymentAmount(currentTournament.entryCost.toString());
         }
       } else if (selectedRound && rounds.find(r => r.key === selectedRound)?.isRebuy) {
-        // For rebuy rounds, don't auto-set to Comp even if player entry type is COMP
+        // For rebuy rounds, never auto-set to Comp - user must choose
         setPaymentType('');
         setPaymentAmount(currentTournament.rebuyCost.toString());
+      } else if (selectedRound === 'round1') {
+        // For Round 1 in post-registration, never auto-set to Comp - user must choose
+        setPaymentType('');
+        setPaymentAmount(currentTournament.entryCost.toString());
       }
       
       setMulliganAmount(currentTournament.mulliganCost.toString());
