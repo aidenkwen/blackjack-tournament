@@ -81,7 +81,7 @@ const ManageTournamentsPage = ({
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div style={{ flex: 1 }}>
-                  <p style={{ margin: 0, fontWeight: 'bold', fontSize: '1.1rem' }}>
+                  <p className="tournament-name">
                     {tournament.name}
                     {selectedEvent === tournament.name && (
                       <span style={{ color: '#8b0000', fontSize: '0.85rem', fontWeight: '600', marginLeft: '8px' }}>
@@ -89,11 +89,11 @@ const ManageTournamentsPage = ({
                       </span>
                     )}
                   </p>
-                  <p style={{ margin: '4px 0 0 0', color: '#666666', fontSize: '0.9rem' }}>
+                  <p className="tournament-metadata">
                     Entry: ${tournament.entryCost} • Rebuy: ${tournament.rebuyCost} • Mulligan: ${tournament.mulliganCost}
                   </p>
                   {tournament.createdDate && (
-                    <p style={{ margin: '4px 0 0 0', color: '#999999', fontSize: '0.8rem' }}>
+                    <p className="tournament-metadata">
                       Created: {new Date(tournament.createdDate).toLocaleDateString()}
                     </p>
                   )}

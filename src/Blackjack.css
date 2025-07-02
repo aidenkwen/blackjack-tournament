@@ -420,38 +420,139 @@ body {
   color: #666666;
 }
 
-/* Player name consistency across all pages - UPDATED WITH STRONGER RULES */
+/* ===================================================================
+   PLAYER NAME & IDENTITY STANDARDIZATION
+   =================================================================== */
+
+/* Primary player name display - used for main player identification */
+.player-name-primary {
+  font-size: 1.5rem;
+  font-weight: bold;
+  margin: 0;
+  line-height: 1.2;
+}
+
+/* Secondary player name display - used in cards, lists, smaller contexts */
+.player-name-secondary {
+  font-size: 1.1rem;
+  font-weight: bold;
+  margin: 0;
+  line-height: 1.2;
+}
+
+/* Compact player name display - used in tight spaces like seating charts */
+.player-name-compact {
+  font-size: 0.75rem;
+  font-weight: bold;
+  margin: 0;
+  line-height: 1.1;
+}
+
+/* Player name with account - inline format "Name, Account" */
+.player-name-with-account {
+  font-size: 1.2rem;
+  font-weight: bold;
+  margin: 0;
+  line-height: 1.2;
+}
+
+.player-name-with-account .account-part {
+  font-weight: normal;
+  color: #666666;
+  font-size: 1rem;
+}
+
+/* Smaller variant for cards like LastPlayerCard */
+.player-name-with-account.compact {
+  font-size: 1rem;
+}
+
+.player-name-with-account.compact .account-part {
+  font-size: 1rem;
+}
+
+/* Player account number display */
+.player-account {
+  font-size: 0.95rem;
+  color: #666666;
+  margin: 0;
+  font-family: monospace;
+}
+
+/* Player metadata (entry type, etc.) */
+.player-metadata {
+  font-size: 0.95rem;
+  color: #666666;
+  margin: 0;
+}
+
+/* Player info container for consistent spacing */
+.player-info-container {
+  margin-bottom: 16px;
+}
+
+/* Player info in seating contexts */
+.player-seating-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 2px;
+}
+
+/* Player info in list contexts */
+.player-list-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* Seat label styling for consistency */
+.seat-label {
+  font-size: 0.8rem;
+  font-weight: bold;
+  margin-bottom: 2px;
+}
+
+/* Tournament info display */
+.tournament-name {
+  font-size: 1.1rem;
+  font-weight: bold;
+  margin: 0;
+}
+
+.tournament-metadata {
+  font-size: 0.9rem;
+  color: #666666;
+  margin: 0;
+}
+
+/* Round and time slot display */
+.round-info {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #333333;
+  margin: 0;
+}
+
+.time-slot-info {
+  font-size: 0.9rem;
+  color: #666666;
+  margin: 0;
+}
+
+/* Legacy compatibility - maintain existing behavior */
 .player-name-display {
-  font-size: 1.5rem !important;
-  font-weight: bold !important;
-  margin: 0 !important;
+  font-size: 1.5rem;
+  font-weight: bold;
+  margin: 0;
 }
 
-/* Ensure h3 elements used for player names match this size */
-h3.player-name-display {
-  font-size: 1.5rem !important;
-  font-weight: bold !important;
-  margin: 0 !important;
-}
-
-/* Target any h3 with player name class specifically */
-h3[class*="player-name"] {
-  font-size: 1.5rem !important;
-  font-weight: bold !important;
-  margin: 0 !important;
-}
-
-/* Override any inline styles that might be making names larger */
-[style*="fontSize"] h3,
-[style*="font-size"] h3 {
-  font-size: 1.5rem !important;
-}
-
-/* Additional specific targeting */
-.seating-assignment-player-name,
-.player-info h3,
-.seating-player-name h3 {
-  font-size: 1.5rem !important;
-  font-weight: bold !important;
-  margin: 0 !important;
+/* Ensure backward compatibility with existing h3 elements */
+h3.player-name-display,
+h3.player-name-primary,
+h3.player-name-secondary {
+  font-size: inherit;
+  font-weight: inherit;
+  margin: inherit;
 }

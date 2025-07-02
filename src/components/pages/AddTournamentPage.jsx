@@ -223,10 +223,10 @@ const AddTournamentPage = ({
                   marginBottom: '16px'
                 }}
               ></div>
-              <p style={{ fontSize: '1.1rem', fontWeight: 'bold', margin: 0 }}>
+              <p className="tournament-name" style={{ margin: 0 }}>
                 Creating tournament and uploading players...
               </p>
-              <p style={{ fontSize: '0.9rem', color: '#666666', margin: 0 }}>
+              <p className="tournament-metadata" style={{ margin: 0 }}>
                 Please wait, this may take a while for large files
               </p>
             </div>
@@ -235,22 +235,22 @@ const AddTournamentPage = ({
               <div style={{ fontSize: '3rem' }}>📁</div>
               {fileUploaded ? (
                 <>
-                  <p style={{ fontSize: '1.1rem', fontWeight: 'bold', margin: 0, color: '#8b0000' }}>
+                  <p className="tournament-name" style={{ margin: 0, color: '#8b0000' }}>
                     ✓ File selected
                   </p>
-                  <p style={{ fontSize: '0.9rem', color: '#666666', margin: 0 }}>
+                  <p className="tournament-metadata" style={{ margin: 0 }}>
                     {uploadedFileName}
                   </p>
-                  <p style={{ fontSize: '0.85rem', color: '#666666', margin: '8px 0 0 0' }}>
+                  <p className="tournament-metadata" style={{ margin: '8px 0 0 0' }}>
                     File will be uploaded when tournament is created
                   </p>
                 </>
               ) : (
                 <>
-                  <p style={{ fontSize: '1.1rem', fontWeight: 'bold', margin: 0, color: '#666666' }}>
+                  <p className="tournament-name" style={{ margin: 0, color: '#666666' }}>
                     Click to select CSV or Excel file (Required)
                   </p>
-                  <p style={{ fontSize: '0.9rem', color: '#666666', margin: 0 }}>
+                  <p className="tournament-metadata" style={{ margin: 0 }}>
                     Player data for this tournament
                   </p>
                 </>

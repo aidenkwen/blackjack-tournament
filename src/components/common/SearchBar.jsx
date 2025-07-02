@@ -85,12 +85,6 @@ const SearchBar = ({
     };
   }, [cardBuffer, lastKeyTime, onCardSwipe, onSearchChange, safeOnSearch]); // Updated dependencies
 
-  const handleKeyPress = (e) => {
-    if (e.key === 'Enter') {
-      safeOnSearch(); // Use safe search wrapper
-    }
-  };
-
   const handleInputChange = (e) => {
     // Reset card buffer when manually typing
     setCardBuffer('');
@@ -105,7 +99,6 @@ const SearchBar = ({
           type="text"
           value={searchValue || ''} // *** FIX: Ensure value is always a string ***
           onChange={handleInputChange}
-          onKeyPress={handleKeyPress}
           className="input-field"
           placeholder={placeholder}
           style={{ flex: 1 }}

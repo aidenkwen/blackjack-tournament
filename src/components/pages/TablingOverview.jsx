@@ -27,7 +27,6 @@ const TablingOverview = ({
   const getDisabledKey = (round, timeSlot, tableNumber) => `${tournament.name}-${round}-${timeSlot}-${tableNumber}`;
 
   const toggleTable = (tableNumber) => {
-    // Check if table has any players before allowing disable
     const hasPlayers = [1, 2, 3, 4, 5, 6].some(seat => getPlayerAtSeat(tableNumber, seat));
     
     if (hasPlayers) {
@@ -43,7 +42,6 @@ const TablingOverview = ({
   };
 
   const isTableDisabled = (tableNumber) => {
-    // Auto-disable table 6 in semifinals
     if (selectedRound === 'semifinals' && tableNumber === 6) {
       return true;
     }
@@ -98,90 +96,113 @@ const TablingOverview = ({
         </div>
       </div>
 
-      {/* Tables Layout - Updated styling with global state */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-        {[1, 2, 3, 4, 5, 6].map(tableNumber => (
-          <div 
-            key={tableNumber} 
-            style={{ 
-              border: '1px solid #ddd', 
-              borderRadius: '8px', 
-              padding: '16px',
-              backgroundColor: '#f2f2f2' // Light grey table background
-            }}
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-              <h3 style={{ margin: 0, fontSize: '1.1rem' }}>Table {tableNumber}</h3>
-              <button
-                onClick={() => toggleTable(tableNumber)}
-                className={`btn ${isTableDisabled(tableNumber) ? 'btn-secondary' : 'btn-success'}`}
-                style={{ 
-                  fontSize: '0.8rem', 
-                  padding: '4px 8px',
-                  backgroundColor: isTableDisabled(tableNumber) ? '#666666' : '#8b0000',
-                  color: '#ffffff',
-                  border: 'none'
-                }}
-              >
-                {isTableDisabled(tableNumber) ? 'Disabled' : 'Active'}
-              </button>
-            </div>
+        {[1, 2, 3, 4, 5, 6].map(tableNumber => {
+          const isDisabled = isTableDisabled(tableNumber);
+          const isPermanentlyDisabled = selectedRound === 'semifinals' && tableNumber === 6;
 
-            {isTableDisabled(tableNumber) ? (
-              <div style={{ 
-                height: '80px', 
-                backgroundColor: '#666666',
-                border: '2px solid #ccc',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: '#ffffff',
-                fontSize: '0.9rem',
-                fontWeight: 'bold'
-              }}>
-                {selectedRound === 'semifinals' && tableNumber === 6 ? 'Table Disabled (Semifinals)' : 'Table Disabled'}
+          const switchTrackStyle = {
+            position: 'relative',
+            width: '50px',
+            height: '26px',
+            backgroundColor: isDisabled ? '#ccc' : '#8b0000',
+            borderRadius: '13px',
+            cursor: isPermanentlyDisabled ? 'not-allowed' : 'pointer',
+            transition: 'background-color 0.2s ease',
+            opacity: isPermanentlyDisabled ? 0.6 : 1,
+          };
+
+          const switchKnobStyle = {
+            position: 'absolute',
+            top: '2px',
+            left: '2px',
+            width: '22px',
+            height: '22px',
+            backgroundColor: '#fff',
+            borderRadius: '50%',
+            transition: 'transform 0.2s ease',
+            transform: isDisabled ? 'translateX(0px)' : 'translateX(24px)',
+          };
+          
+          return (
+            <div 
+              key={tableNumber} 
+              style={{ 
+                border: '1px solid #ddd', 
+                borderRadius: '8px', 
+                padding: '16px',
+                backgroundColor: '#f2f2f2'
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                <h3 style={{ margin: 0, fontSize: '1.1rem' }}>Table {tableNumber}</h3>
+                <div 
+                  style={switchTrackStyle} 
+                  onClick={() => !isPermanentlyDisabled && toggleTable(tableNumber)}
+                  title={isPermanentlyDisabled ? 'Cannot change status' : isDisabled ? 'Click to activate' : 'Click to disable'}
+                >
+                  <div style={switchKnobStyle} />
+                </div>
               </div>
-            ) : (
-              <div style={{ display: 'flex', gap: '8px' }}>
-                {[1, 2, 3, 4, 5, 6].map(seatNumber => {
-                  const player = getPlayerAtSeat(tableNumber, seatNumber);
-                  return (
-                    <div
-                      key={seatNumber}
-                      style={{
-                        minHeight: '60px',
-                        minWidth: '80px',
-                        border: '2px solid #ccc',
-                        borderRadius: '4px',
-                        padding: '8px',
-                        backgroundColor: player ? '#666666' : '#ffffff', // Dark grey when occupied, white when empty
-                        cursor: 'default', // Not clickable
-                        display: 'flex',
-                        flexDirection: 'column',
-                        justifyContent: 'center',
-                        alignItems: 'center',
-                        fontSize: '0.8rem',
-                        textAlign: 'center',
-                        flex: 1
-                      }}
-                    >
-                      <div style={{ fontWeight: 'bold', marginBottom: '2px', color: player ? '#ffffff' : '#000' }}>
-                        Seat {seatNumber}
-                      </div>
-                      {player ? (
-                        <div style={{ color: '#ffffff', fontSize: '0.75rem' }}>
-                          {player.firstName} {player.lastName}
+
+              {isDisabled ? (
+                <div style={{ 
+                  height: '80px', 
+                  boxSizing: 'border-box',
+                  borderRadius: '4px',
+                  backgroundColor: '#666666',
+                  border: '2px solid #ccc',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#ffffff',
+                  fontSize: '0.9rem',
+                  fontWeight: 'bold'
+                }}>
+                  {isPermanentlyDisabled ? 'Table Disabled (Semifinals)' : 'Table Disabled'}
+                </div>
+              ) : (
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  {[1, 2, 3, 4, 5, 6].map(seatNumber => {
+                    const player = getPlayerAtSeat(tableNumber, seatNumber);
+                    return (
+                      <div
+                        key={seatNumber}
+                        style={{
+                          minHeight: '60px',
+                          minWidth: '80px',
+                          border: '2px solid #ccc',
+                          borderRadius: '4px',
+                          padding: '8px',
+                          backgroundColor: player ? '#666666' : '#ffffff',
+                          cursor: 'default',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          justifyContent: 'center',
+                          alignItems: 'center',
+                          fontSize: '0.8rem',
+                          textAlign: 'center',
+                          flex: 1
+                        }}
+                      >
+                        <div className="seat-label" style={{ color: player ? '#ffffff' : '#000' }}>
+                          Seat {seatNumber}
                         </div>
-                      ) : (
-                        <div style={{ color: '#999' }}>Empty</div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        ))}
+                        {player ? (
+                          <div className="player-name-compact" style={{ color: '#ffffff' }}>
+                            {player.firstName} {player.lastName}
+                          </div>
+                        ) : (
+                          <div style={{ color: '#999' }}>Empty</div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
     </div>
   );

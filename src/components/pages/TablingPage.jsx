@@ -56,7 +56,7 @@ const TablingPage = ({
       <button onClick={() => setCurrentPage(1)} className="link-back link-back-block">{'<'} Back to Registration</button>
       <div style={{ marginBottom: '24px' }}>
         <h1 className="page-title" style={{ marginBottom: '0', display: 'inline' }}>{selectedEvent} / Player Seating</h1>
-        <span style={{ fontSize: '1.2rem', color: '#666', marginLeft: '16px', fontWeight: '500' }}>{currentRound?.name} - Time Slot {selectedTimeSlot}</span>
+        <span className="round-info" style={{ marginLeft: '16px' }}>{currentRound?.name} - Time Slot {selectedTimeSlot}</span>
       </div>
       <div style={{ display: 'flex', gap: '16px', marginBottom: '24px' }}>
         <div className="form-group" style={{ flex: 1 }}>
@@ -72,7 +72,9 @@ const TablingPage = ({
           </select>
         </div>
       </div>
-      <div style={{ marginBottom: '16px' }}><span style={{ color: '#666', fontSize: '0.9rem' }}>Seated Players: {getSeatedPlayers().length}</span></div>
+      <div style={{ marginBottom: '16px' }}>
+        <span className="player-metadata">Seated Players: {getSeatedPlayers().length}</span>
+      </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
         {[1, 2, 3, 4, 5, 6].map(tableNumber => (
           <div key={tableNumber} style={{ border: '1px solid #ddd', borderRadius: '8px', padding: '16px', backgroundColor: '#f2f2f2' }}>
@@ -92,11 +94,10 @@ const TablingPage = ({
                   const player = getPlayerAtSeat(tableNumber, seatNumber);
                   return (
                     <div key={seatNumber} style={{ minHeight: '80px', minWidth: '80px', border: '2px solid #ccc', borderRadius: '4px', padding: '8px', backgroundColor: player ? '#666666' : '#ffffff', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', alignItems: 'center', flex: 1 }}>
-                      <div style={{ fontWeight: 'bold', fontSize: '0.8rem', color: player ? '#ffffff' : '#000' }}>Seat {seatNumber}</div>
+                      <div className="seat-label" style={{ color: player ? '#ffffff' : '#000' }}>Seat {seatNumber}</div>
                       {player ? (
-                        // --- ROBUST INLINE LAYOUT WRAPPER ---
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', gap: '4px' }}>
-                          <span title={`${player.firstName} ${player.lastName}`} style={{ flexGrow: 1, textAlign: 'left', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontSize: '0.75rem', fontWeight: 'bold', color: '#ffffff' }}>
+                          <span title={`${player.firstName} ${player.lastName}`} className="player-name-compact" style={{ flexGrow: 1, textAlign: 'left', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: '#ffffff' }}>
                             {player.firstName} {player.lastName}
                           </span>
                           {player.seatPreferences && (

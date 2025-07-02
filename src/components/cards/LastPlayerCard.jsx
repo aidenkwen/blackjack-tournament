@@ -7,10 +7,12 @@ const LastPlayerCard = ({ lastPlayer, showSeatingInfo = false }) => {
     <div className="card last-added">
       <h3 className="card-title">Last Added ({lastPlayer.roundContext})</h3>
       <div className="card-content">
-        <p className="last-added-line">{lastPlayer.name}, {lastPlayer.accountNumber}</p>
-        <p className="last-added-line">{lastPlayer.purchases}</p>
+        <p className="last-added-line player-name-with-account compact">
+          {lastPlayer.name}<span className="account-part">, {lastPlayer.accountNumber}</span>
+        </p>
+        <p className="last-added-line player-metadata">{lastPlayer.purchases}</p>
         {showSeatingInfo && lastPlayer.seatingInfo && (
-          <p className="last-added-line">
+          <p className="last-added-line player-metadata">
             {lastPlayer.seatingInfo}
           </p>
         )}

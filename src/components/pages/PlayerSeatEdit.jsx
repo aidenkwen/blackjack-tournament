@@ -114,6 +114,8 @@ const PlayerSeatEdit = ({
     );
   };
 
+
+
   const handleSeatClickInModal = (tableNumber, seatNumber) => {
     if (isTableDisabled(tableNumber, modalRound, modalTimeSlot)) return;
     
@@ -203,7 +205,7 @@ const PlayerSeatEdit = ({
       <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0, 0, 0, 0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
         <div style={{ backgroundColor: 'white', padding: '24px', borderRadius: '8px', maxWidth: '95%', maxHeight: '90%', overflow: 'auto' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-            <h3 style={{ margin: 0 }}>{roundName} - Time Slot {modalTimeSlot} - Edit Seating</h3>
+            <h3 style={{ margin: 0 }} className="round-info">{roundName} - Time Slot {modalTimeSlot} - Edit Seating</h3>
             <button 
               onClick={() => {
                 setShowSeatingModal(false);
@@ -220,9 +222,10 @@ const PlayerSeatEdit = ({
             <div style={{ marginBottom: '16px', padding: '12px', backgroundColor: '#f0f8ff', border: '1px solid #ccc', borderRadius: '4px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span>
-                  <strong>Selected:</strong> {selectedPlayerInModal.firstName} {selectedPlayerInModal.lastName} 
+                  <strong>Selected:</strong> 
+                  <span className="player-name-secondary"> {selectedPlayerInModal.firstName} {selectedPlayerInModal.lastName}</span>
                   {selectedPlayerInModal.tableNumber && selectedPlayerInModal.seatNumber && 
-                    ` (Table ${selectedPlayerInModal.tableNumber}, Seat ${selectedPlayerInModal.seatNumber})`
+                    <span className="player-metadata"> (Table {selectedPlayerInModal.tableNumber}, Seat {selectedPlayerInModal.seatNumber})</span>
                   }
                 </span>
                 <div style={{ display: 'flex', gap: '8px' }}>
@@ -328,11 +331,11 @@ const PlayerSeatEdit = ({
                                 : 'Empty seat'
                           }
                         >
-                          <div style={{ fontWeight: 'bold', marginBottom: '2px', color: textColor }}>
+                          <div className="seat-label" style={{ color: textColor }}>
                             Seat {seatNumber}
                           </div>
                           {player ? (
-                            <div style={{ color: textColor, fontSize: '0.7rem' }}>
+                            <div className="player-name-compact" style={{ color: textColor }}>
                               {player.firstName} {player.lastName}
                             </div>
                           ) : (
@@ -380,16 +383,17 @@ const PlayerSeatEdit = ({
 
       {playerRegistrations.length > 0 && (
         <div style={{ marginBottom: '24px' }}>
-          <div style={{ marginBottom: '16px' }}>
-            <h3 className="player-name-display">{playerRegistrations[0].firstName} {playerRegistrations[0].lastName}</h3>
-            <p style={{ margin: '4px 0 0 0', color: '#666' }}>Account: {playerRegistrations[0].playerAccountNumber}</p>
+          <div className="player-info-container">
+            <h3 className="player-name-with-account">
+              {playerRegistrations[0].firstName} {playerRegistrations[0].lastName}<span className="account-part">, {playerRegistrations[0].playerAccountNumber}</span>
+            </h3>
           </div>
           {playerRegistrations.map((reg) => {
             const roundName = rounds.find(r => r.key === reg.round)?.name;
             return (
               <div key={reg.id} style={{ marginBottom: '16px', padding: '16px', border: '1px solid #ddd', borderRadius: '4px', backgroundColor: '#f9f9f9' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                  <h4 style={{ margin: 0 }}>{roundName} - Time Slot {reg.timeSlot}</h4>
+                  <h4 className="round-info">{roundName} - Time Slot {reg.timeSlot}</h4>
                   <button 
                     onClick={() => showFullSeating(reg.round, reg.timeSlot)} 
                     className="btn" 
@@ -398,7 +402,7 @@ const PlayerSeatEdit = ({
                     Edit Seating
                   </button>
                 </div>
-                <p style={{ margin: '0', fontSize: '0.9rem', color: '#666' }}>
+                <p className="player-metadata">
                   Current Seating: {reg.tableNumber && reg.seatNumber 
                     ? `Table ${reg.tableNumber}, Seat ${reg.seatNumber}` 
                     : 'Not seated'}

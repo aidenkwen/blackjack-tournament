@@ -91,7 +91,7 @@ const TablingManagement = ({
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap' }}>
           <div style={{ display: 'flex', gap: '24px', flexWrap: 'wrap' }}>
             {Object.entries(paymentTotals).map(([paymentType, total]) => (
-              <div key={paymentType} style={{ 
+              <div key={paymentType} className="tournament-metadata" style={{ 
                 fontSize: '1rem',
                 fontWeight: '600',
                 color: '#333'
