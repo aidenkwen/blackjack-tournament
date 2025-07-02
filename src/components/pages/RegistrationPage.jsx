@@ -38,8 +38,6 @@ const RegistrationPage = () => {
 
   const { clearForm } = registrationHook;
   useEffect(() => {
-    // When the user changes the main context (tab, round, or slot), clear the form.
-    // This prevents carrying over player data to a new context.
     clearForm();
   }, [lastActiveTab, lastSelectedRound, lastSelectedTimeSlot, clearForm]);
 
@@ -163,7 +161,10 @@ const RegistrationPage = () => {
             selectedRound={lastSelectedRound}
             currentTournament={currentTournament}
           />
-          {lastPlayer && <LastPlayerCard lastPlayer={lastPlayer} showSeatingInfo={true} />}
+          {/* FIX: Conditionally render the LastPlayerCard */}
+          {lastPlayer && !registrationHook.currentPlayer && (
+            <LastPlayerCard lastPlayer={lastPlayer} showSeatingInfo={true} />
+          )}
         </>
       ) : (
         <p className="subheading" style={{ textAlign: 'center' }}>
