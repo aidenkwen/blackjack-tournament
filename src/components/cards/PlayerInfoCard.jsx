@@ -1,15 +1,7 @@
 import React from 'react';
 
-const PlayerInfoCard = ({ currentPlayer, activeTab, selectedRound }) => {
-  const rounds = [
-    { key: 'round1', name: 'Round 1' },
-    { key: 'rebuy1', name: 'Rebuy 1' },
-    { key: 'rebuy2', name: 'Rebuy 2' },
-    { key: 'round2', name: 'Round 2' },
-    { key: 'superrebuy', name: 'Super Rebuy' },
-    { key: 'quarterfinals', name: 'Quarterfinals' },
-    { key: 'semifinals', name: 'Semifinals' }
-  ];
+const PlayerInfoCard = ({ currentPlayer }) => {
+  // FIX: The 'rounds' array and 'getRoundName' function have been removed as they are no longer needed.
 
   return (
     <div className="player-info-container">
@@ -17,6 +9,10 @@ const PlayerInfoCard = ({ currentPlayer, activeTab, selectedRound }) => {
         {currentPlayer.firstName} {currentPlayer.lastName}
         <span className="account-part">, {currentPlayer.playerAccountNumber}</span>
       </h3>
+      <p className="player-metadata">
+        {/* FIX: Removed the "Registering for" text. */}
+        Entry Type: {currentPlayer.entryType}
+      </p>
     </div>
   );
 };
