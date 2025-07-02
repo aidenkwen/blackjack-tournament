@@ -59,11 +59,12 @@ const SeatingAssignmentPage = ({
     } 
     setConfirming(true); 
     
-    // Remove ALL existing registrations for this player in this event (not just matching types)
-    // This ensures we clear any previous seating assignments
-    const registrationsWithoutPlayerEntries = registrations.filter(reg => 
+    // Only remove registrations for this specific round/timeslot, not all registrations
+    const registrationsWithoutCurrentRoundEntries = registrations.filter(reg => 
       !(reg.playerAccountNumber === lastRegisteredPlayer.playerAccountNumber && 
-        reg.eventName === selectedEvent)
+        reg.eventName === selectedEvent &&
+        reg.round === lastRegisteredPlayer.round &&
+        reg.timeSlot === lastRegisteredPlayer.timeSlot)
     );
     
     // Create new registrations with seat assignments
@@ -75,8 +76,8 @@ const SeatingAssignmentPage = ({
       seatNumber: selectedSeat.seat 
     })); 
     
-    // Combine: all other players + this player's new registrations
-    const finalRegistrations = [...registrationsWithoutPlayerEntries, ...newRegistrationsWithSeats]; 
+    // Combine: all other registrations + this round's new registrations
+    const finalRegistrations = [...registrationsWithoutCurrentRoundEntries, ...newRegistrationsWithSeats]; 
     
     setRegistrations(finalRegistrations); 
     alert(`${lastRegisteredPlayer.firstName} ${lastRegisteredPlayer.lastName} assigned to Table ${selectedSeat.table}, Seat ${selectedSeat.seat}`); 

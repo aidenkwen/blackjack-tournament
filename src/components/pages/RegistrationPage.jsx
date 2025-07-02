@@ -125,6 +125,13 @@ const RegistrationPage = ({
   };
 
   const getPlayerEntryType = (playerAccountNumber) => {
+    // First, check the master data for the player's base entry type
+    const player = masterData.find(p => normalizeAccount(p.PlayerAccountNumber) === normalizeAccount(playerAccountNumber));
+    if (player && player.EntryType === 'COMP') {
+      return 'COMP';
+    }
+    
+    // If not COMP in master data, or no master data found, check registrations
     const playerRegistrations = currentTournamentRegistrations
       .filter(r => normalizeAccount(r.playerAccountNumber) === normalizeAccount(playerAccountNumber))
       .sort((a, b) => new Date(b.registrationDate) - new Date(a.registrationDate));
@@ -134,10 +141,6 @@ const RegistrationPage = ({
       return mostRecent.eventType === 'COMP' || mostRecent.eventType.includes('COMP') ? 'COMP' : 'PAY';
     }
     
-    const player = masterData.find(p => normalizeAccount(p.PlayerAccountNumber) === normalizeAccount(playerAccountNumber));
-    if (player && player.EntryType === 'COMP') {
-      return 'COMP';
-    }
     return 'PAY';
   };
 
@@ -307,6 +310,7 @@ const RegistrationPage = ({
           setPaymentAmount(currentTournament.entryCost.toString());
         }
       } else if (selectedRound && rounds.find(r => r.key === selectedRound)?.isRebuy) {
+        // For rebuy rounds, don't auto-set to Comp even if player entry type is COMP
         setPaymentType('');
         setPaymentAmount(currentTournament.rebuyCost.toString());
       }
