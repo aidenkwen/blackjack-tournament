@@ -8,6 +8,8 @@ import RegistrationPage from './components/pages/RegistrationPage';
 import SeatingAssignmentPage from './components/pages/SeatingAssignmentPage';
 import TablingManagement from './components/pages/TablingManagement';
 import ExportPage from './components/pages/ExportPage';
+import { Toaster } from 'react-hot-toast';
+import toast from 'react-hot-toast';
 
 const App = () => {
   const [currentPage, setCurrentPage] = useState(0);
@@ -16,15 +18,12 @@ const App = () => {
   const [lastRegisteredPlayer, setLastRegisteredPlayer] = useState(null);
   const [pendingRegistration, setPendingRegistration] = useState(null);
   
-  // Global state for seating and table management
   const [globalDisabledTables, setGlobalDisabledTables] = useState({});
   
-  // Tab persistence state
   const [lastActiveTab, setLastActiveTab] = useState('registration');
-  const [lastSelectedRound, setLastSelectedRound] = useState('');
-  const [lastSelectedTimeSlot, setLastSelectedTimeSlot] = useState('');
+  const [lastSelectedRound, setLastSelectedRound] = useState('round1');
+  const [lastSelectedTimeSlot, setLastSelectedTimeSlot] = useState(1);
 
-  // Your existing API hooks
   const { 
     tournaments, 
     loading: tournamentsLoading, 
@@ -51,20 +50,18 @@ const App = () => {
     error: registrationsError 
   } = useRegistrations(selectedEvent);
 
-  // Your existing functions
-  const exportBackup = () => alert('Database backup: Export SQL data or implement backup API endpoint');
+  const exportBackup = () => toast.error('Backup endpoint not implemented.');
   const importBackup = (event) => {
-    alert('Database restore: Import SQL data or implement restore API endpoint');
+    toast.error('Restore endpoint not implemented.');
     event.target.value = '';
   };
   const clearAllData = () => {
     const confirmed = window.confirm(
       'This will delete ALL tournaments, players, and registrations from the database. This cannot be undone. Are you sure?'
     );
-    if (confirmed) alert('Database clear: Implement API endpoint to truncate all tables');
+    if (confirmed) toast.error('Clear All Data endpoint not implemented.');
   };
 
-  // Your existing error handling
   if (tournamentsError || playersError || registrationsError) {
     return (
       <div className="container">
@@ -80,6 +77,28 @@ const App = () => {
 
   return (
     <>
+      <Toaster 
+        position="top-center"
+        toastOptions={{
+          // Default options for ALL toasts
+          style: {
+            background: '#EEEEEE', // Light Grey for ALL toasts
+            color: '#000000',     // Dark text for ALL toasts
+            border: '1px solid rgba(0, 0, 0, 0.1)',
+          },
+          
+          // You can still have specific durations without changing the style
+          error: {
+            duration: 4000,
+            // FIX: Removed the style block from here
+          },
+          success: {
+            duration: 2500,
+            // FIX: Removed the style block from here
+          }
+        }}
+      />
+      
       {currentPage === 0 && (
         <EventSelectionPage
           selectedEvent={selectedEvent}
@@ -123,6 +142,12 @@ const App = () => {
       )}
       {currentPage === 1 && (
         <RegistrationPage
+          activeTab={lastActiveTab}
+          selectedRound={lastSelectedRound}
+          selectedTimeSlot={lastSelectedTimeSlot}
+          setActiveTab={setLastActiveTab}
+          setSelectedRound={setLastSelectedRound}
+          setSelectedTimeSlot={setLastSelectedTimeSlot}
           selectedEvent={selectedEvent}
           employee={employee}
           tournaments={tournaments}
@@ -136,12 +161,6 @@ const App = () => {
           pendingRegistration={pendingRegistration}
           setPendingRegistration={setPendingRegistration}
           loading={registrationsLoading}
-          lastActiveTab={lastActiveTab}
-          setLastActiveTab={setLastActiveTab}
-          lastSelectedRound={lastSelectedRound}
-          setLastSelectedRound={setLastSelectedRound}
-          lastSelectedTimeSlot={lastSelectedTimeSlot}
-          setLastSelectedTimeSlot={setLastSelectedTimeSlot}
           globalDisabledTables={globalDisabledTables}
           setGlobalDisabledTables={setGlobalDisabledTables}
         />

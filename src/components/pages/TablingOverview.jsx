@@ -18,29 +18,27 @@ const TablingOverview = ({
     { key: 'semifinals', name: 'Semifinals', timeSlots: 1 }
   ];
 
-  // Function to get the most recent round with player activity
   const getMostRecentRound = useCallback(() => {
     if (!registrations || registrations.length === 0) {
       return 'round1';
     }
-
     const sortedRegistrations = [...registrations]
       .filter(r => r.registrationDate)
       .sort((a, b) => new Date(b.registrationDate) - new Date(a.registrationDate));
-
     if (sortedRegistrations.length > 0) {
       return sortedRegistrations[0].round || 'round1';
     }
-    
     return 'round1';
   }, [registrations]);
 
   const [selectedRound, setSelectedRound] = useState(() => getMostRecentRound());
-  const [selectedTimeSlot, setSelectedTimeSlot] = useState('');
+  const [selectedTimeSlot, setSelectedTimeSlot] = useState(1); // Default to 1
 
   useEffect(() => {
     const mostRecentRound = getMostRecentRound();
     setSelectedRound(mostRecentRound);
+    // When the component loads or registrations change, default the time slot to 1
+    setSelectedTimeSlot(1); 
   }, [getMostRecentRound]);
 
   const currentRound = rounds.find(r => r.key === selectedRound);
@@ -75,7 +73,7 @@ const TablingOverview = ({
   const getPlayerAtSeat = (tableNumber, seatNumber) => {
     return registrations.find(r =>
       r.round === selectedRound &&
-      r.timeSlot === selectedTimeSlot &&
+      r.timeSlot === selectedTimeSlot && // Use strict equality, now that selectedTimeSlot is a number
       r.tableNumber === tableNumber &&
       r.seatNumber === seatNumber
     );
@@ -90,7 +88,8 @@ const TablingOverview = ({
             value={selectedRound}
             onChange={(e) => {
               setSelectedRound(e.target.value);
-              setSelectedTimeSlot('');
+              // When changing rounds, default time slot to 1 for the new round
+              setSelectedTimeSlot(1);
             }}
             className="select-field"
           >
@@ -106,10 +105,11 @@ const TablingOverview = ({
           <label className="mb-2">Time Slot</label>
           <select
             value={selectedTimeSlot}
-            onChange={(e) => setSelectedTimeSlot(e.target.value)}
+            // FIX: Ensure the value is parsed as an integer for strict comparison
+            onChange={(e) => setSelectedTimeSlot(parseInt(e.target.value, 10))}
             className="select-field"
           >
-            <option value="">-- Select Time Slot --</option>
+            {/* The "Select Time Slot" option can be removed if we always default to 1 */}
             {availableTimeSlots.map(slot => (
               <option key={slot} value={slot}>
                 Slot {slot}

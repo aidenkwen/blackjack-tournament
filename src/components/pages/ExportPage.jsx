@@ -1,6 +1,29 @@
 import React, { useState } from 'react';
 import Papa from 'papaparse';
 
+// Utility function to normalize player data from various possible field names
+const normalizePlayerData = (playerData) => {
+  if (!playerData) return {};
+  return {
+    playerAccountNumber: playerData.PlayerAccountNumber || 
+                        playerData['Player Account Number'] || 
+                        playerData.playerAccountNumber || 
+                        playerData.AccountNumber,
+    firstName: playerData.FirstName || 
+               playerData['First Name'] || 
+               playerData.firstName,
+    lastName: playerData.LastName || 
+              playerData['Last Name'] || 
+              playerData.lastName,
+    entryType: playerData.EntryType || 
+               playerData['Entry Type'] || 
+               playerData.entryType,
+    host: playerData.Host || 
+          playerData.host || 
+          ''
+  };
+};
+
 const ExportPage = ({ selectedEvent, employee, masterData, registrations, setCurrentPage }) => {
   const [exportType, setExportType] = useState('registrations');
   const [selectedExportRound, setSelectedExportRound] = useState('');
@@ -56,22 +79,25 @@ const ExportPage = ({ selectedEvent, employee, masterData, registrations, setCur
       const combinedData = [];
       
       if (roundKey === 'round1') {
-        combinedData.push(...masterData.map((player) => ({
-          PlayerAccountNumber: player.PlayerAccountNumber,
-          FirstName: player.FirstName,
-          LastName: player.LastName,
-          EventName: selectedEvent,
-          EventType: player.EntryType,
-          PaymentType: player.EntryType === 'COMP' ? 'Comp' : 'Cash',
-          PaymentAmount: player.EntryType === 'COMP' ? 0 : 500,
-          UploadedDate: new Date().toISOString(),
-          Host: player.host || '',
-          Employee: employee,
-          Round: null,
-          TimeSlot: null,
-          TableNumber: null,
-          SeatNumber: null
-        })));
+        combinedData.push(...masterData.map((player) => {
+          const normalizedPlayer = normalizePlayerData(player);
+          return {
+            PlayerAccountNumber: normalizedPlayer.playerAccountNumber,
+            FirstName: normalizedPlayer.firstName,
+            LastName: normalizedPlayer.lastName,
+            EventName: selectedEvent,
+            EventType: normalizedPlayer.entryType,
+            PaymentType: normalizedPlayer.entryType === 'COMP' ? 'Comp' : 'Cash',
+            PaymentAmount: normalizedPlayer.entryType === 'COMP' ? 0 : 500,
+            UploadedDate: new Date().toISOString(),
+            Host: normalizedPlayer.host,
+            Employee: employee,
+            Round: null,
+            TimeSlot: null,
+            TableNumber: null,
+            SeatNumber: null
+          };
+        }));
       }
 
       combinedData.push(...roundRegistrations.map((reg) => ({

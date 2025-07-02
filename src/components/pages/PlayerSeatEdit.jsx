@@ -1,3 +1,8 @@
+
+// ============================================================================
+// COMPLETE FIXED PlayerSeatEdit.js with robust search
+// ============================================================================
+
 import React, { useState } from 'react';
 import { UC } from '../../utils/formatting';
 import SearchBar from '../common/SearchBar';
@@ -40,8 +45,9 @@ const PlayerSeatEdit = ({
     return globalDisabledTables[key] || false;
   };
 
+  // FIXED: Robust search function that handles null/undefined values properly
   const searchPlayers = () => {
-    // *** FIX: Ensure searchTerm is always a string ***
+    // Ensure searchTerm is always a string and handle null/undefined
     const searchTermString = String(searchTerm || '').trim();
     
     if (!searchTermString) {
@@ -49,20 +55,24 @@ const PlayerSeatEdit = ({
       return;
     }
 
-    // *** FIX 1: Make search more robust to handle null/undefined data ***
+    // Make search more robust to handle null/undefined data
     const found = registrations.filter(r => {
       // Ensure the registration belongs to the current tournament
-      if (r.eventName !== tournament.name) return false;
+      if (!r || r.eventName !== tournament.name) return false;
 
       // Only search primary registrations, not rebuys or mulligans
       if (r.isRebuy || r.isMulligan) return false;
 
       const term = searchTermString.toLowerCase();
       
-      // Safely check each field before calling .includes() or .toLowerCase()
-      const matchesFirstName = r.firstName && r.firstName.toLowerCase().includes(term);
-      const matchesLastName = r.lastName && r.lastName.toLowerCase().includes(term);
-      const matchesAccount = r.playerAccountNumber && r.playerAccountNumber.toString().includes(searchTermString);
+      // Safely check each field with proper null/undefined handling
+      const firstName = r.firstName ? String(r.firstName).toLowerCase() : '';
+      const lastName = r.lastName ? String(r.lastName).toLowerCase() : '';
+      const accountNumber = r.playerAccountNumber ? String(r.playerAccountNumber) : '';
+
+      const matchesFirstName = firstName.includes(term);
+      const matchesLastName = lastName.includes(term);
+      const matchesAccount = accountNumber.includes(searchTermString);
 
       return matchesFirstName || matchesLastName || matchesAccount;
     });
@@ -73,6 +83,7 @@ const PlayerSeatEdit = ({
       return;
     }
 
+    // Group by player account number
     const playerGroups = {};
     found.forEach(reg => {
       const key = reg.playerAccountNumber;
@@ -83,13 +94,21 @@ const PlayerSeatEdit = ({
     if (Object.keys(playerGroups).length > 1) {
       const playerList = Object.values(playerGroups).map((group, i) => {
         const player = group[0];
-        return `${i + 1}. ${player.firstName} ${player.lastName} (${player.playerAccountNumber})`;
+        const firstName = player.firstName || 'Unknown';
+        const lastName = player.lastName || 'Unknown';
+        const accountNumber = player.playerAccountNumber || 'Unknown';
+        return `${i + 1}. ${firstName} ${lastName} (${accountNumber})`;
       }).join('\n');
+      
       const choice = prompt(`Multiple players found:\n\n${playerList}\n\nEnter the number of the player you want to edit:`);
       const index = parseInt(choice) - 1;
       const playerGroupsArray = Object.values(playerGroups);
+      
       if (index >= 0 && index < playerGroupsArray.length) {
         setPlayerRegistrations(playerGroupsArray[index]);
+      } else {
+        alert('Invalid selection.');
+        setPlayerRegistrations([]);
       }
     } else {
       setPlayerRegistrations(Object.values(playerGroups)[0]);
@@ -113,8 +132,6 @@ const PlayerSeatEdit = ({
       r.seatNumber === seatNumber
     );
   };
-
-
 
   const handleSeatClickInModal = (tableNumber, seatNumber) => {
     if (isTableDisabled(tableNumber, modalRound, modalTimeSlot)) return;
@@ -140,7 +157,7 @@ const PlayerSeatEdit = ({
     const roundName = rounds.find(r => r.key === modalRound)?.name;
     
     const confirmed = window.confirm(
-      `Move ${player.firstName} ${player.lastName} to Table ${newTable}, Seat ${newSeat} in ${roundName}?`
+      `Move ${player.firstName || 'Unknown'} ${player.lastName || 'Unknown'} to Table ${newTable}, Seat ${newSeat} in ${roundName}?`
     );
 
     if (confirmed) {
@@ -172,7 +189,7 @@ const PlayerSeatEdit = ({
       setSelectedPlayerInModal(null);
       setSelectedSeatInModal(null);
       
-      alert(`${player.firstName} ${player.lastName} moved successfully.`);
+      alert(`${player.firstName || 'Unknown'} ${player.lastName || 'Unknown'} moved successfully.`);
     }
   };
 
@@ -180,7 +197,7 @@ const PlayerSeatEdit = ({
     const roundName = rounds.find(r => r.key === modalRound)?.name;
     
     const confirmed = window.confirm(
-      `Remove ${player.firstName} ${player.lastName} from their seat in ${roundName}?`
+      `Remove ${player.firstName || 'Unknown'} ${player.lastName || 'Unknown'} from their seat in ${roundName}?`
     );
 
     if (confirmed) {
@@ -193,7 +210,7 @@ const PlayerSeatEdit = ({
 
       setRegistrations(updatedRegistrations);
       setSelectedPlayerInModal(null);
-      alert(`${player.firstName} ${player.lastName} removed from seat.`);
+      alert(`${player.firstName || 'Unknown'} ${player.lastName || 'Unknown'} removed from seat.`);
     }
   };
 
@@ -223,7 +240,7 @@ const PlayerSeatEdit = ({
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span>
                   <strong>Selected:</strong> 
-                  <span className="player-name-secondary"> {selectedPlayerInModal.firstName} {selectedPlayerInModal.lastName}</span>
+                  <span className="player-name-secondary"> {selectedPlayerInModal.firstName || 'Unknown'} {selectedPlayerInModal.lastName || 'Unknown'}</span>
                   {selectedPlayerInModal.tableNumber && selectedPlayerInModal.seatNumber && 
                     <span className="player-metadata"> (Table {selectedPlayerInModal.tableNumber}, Seat {selectedPlayerInModal.seatNumber})</span>
                   }
@@ -325,7 +342,7 @@ const PlayerSeatEdit = ({
                           }}
                           title={
                             player 
-                              ? `${player.firstName} ${player.lastName} - Click to select`
+                              ? `${player.firstName || 'Unknown'} ${player.lastName || 'Unknown'} - Click to select`
                               : selectedPlayerInModal 
                                 ? 'Click to move selected player here'
                                 : 'Empty seat'
@@ -336,7 +353,7 @@ const PlayerSeatEdit = ({
                           </div>
                           {player ? (
                             <div className="player-name-compact" style={{ color: textColor }}>
-                              {player.firstName} {player.lastName}
+                              {player.firstName || 'Unknown'} {player.lastName || 'Unknown'}
                             </div>
                           ) : (
                             <div style={{ color: textColor === '#ffffff' ? textColor : '#999', fontSize: '0.7rem' }}>
@@ -385,7 +402,7 @@ const PlayerSeatEdit = ({
         <div style={{ marginBottom: '24px' }}>
           <div className="player-info-container">
             <h3 className="player-name-with-account">
-              {playerRegistrations[0].firstName} {playerRegistrations[0].lastName}<span className="account-part">, {playerRegistrations[0].playerAccountNumber}</span>
+              {playerRegistrations[0].firstName || 'Unknown'} {playerRegistrations[0].lastName || 'Unknown'}<span className="account-part">, {playerRegistrations[0].playerAccountNumber || 'Unknown'}</span>
             </h3>
           </div>
           {playerRegistrations.map((reg) => {
