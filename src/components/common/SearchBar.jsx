@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 
 const SearchBar = ({ 
   searchValue, 
@@ -16,6 +16,15 @@ const SearchBar = ({
   const CARD_LENGTH = 14;
   const MAX_TIME_BETWEEN_CHARS = 50; // milliseconds
   const MIN_SWIPE_SPEED = 10; // characters per 100ms
+
+  // *** FIX: Create a safe search wrapper ***
+  const safeOnSearch = useCallback(() => {
+    // Ensure searchValue is always a string before calling onSearch
+    const currentValue = String(searchValue || '');
+    if (currentValue.trim()) {
+      onSearch();
+    }
+  }, [searchValue, onSearch]);
 
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -51,7 +60,7 @@ const SearchBar = ({
             } else {
               // Default behavior: set as search value and trigger search
               onSearchChange(newBuffer);
-              setTimeout(() => onSearch(), 100); // Small delay to ensure state updates
+              setTimeout(() => safeOnSearch(), 100); // Use safe search wrapper
             }
           }
           
@@ -60,7 +69,7 @@ const SearchBar = ({
       } else if (e.key === 'Enter') {
         // Handle manual enter key
         setCardBuffer('');
-        onSearch();
+        safeOnSearch(); // Use safe search wrapper
       } else if (e.key === 'Backspace' || e.key === 'Delete') {
         // Reset card buffer on deletion
         setCardBuffer('');
@@ -74,11 +83,11 @@ const SearchBar = ({
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [cardBuffer, lastKeyTime, onCardSwipe, onSearchChange, onSearch]);
+  }, [cardBuffer, lastKeyTime, onCardSwipe, onSearchChange, safeOnSearch]); // Updated dependencies
 
   const handleKeyPress = (e) => {
     if (e.key === 'Enter') {
-      onSearch();
+      safeOnSearch(); // Use safe search wrapper
     }
   };
 
@@ -94,7 +103,7 @@ const SearchBar = ({
         <input
           ref={inputRef}
           type="text"
-          value={searchValue}
+          value={searchValue || ''} // *** FIX: Ensure value is always a string ***
           onChange={handleInputChange}
           onKeyPress={handleKeyPress}
           className="input-field"
@@ -104,7 +113,7 @@ const SearchBar = ({
           autoComplete="off"
         />
         <button
-          onClick={onSearch}
+          onClick={safeOnSearch} // Use safe search wrapper
           className="btn btn-primary"
           disabled={disabled}
         >

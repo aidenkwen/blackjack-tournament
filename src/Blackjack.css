@@ -258,8 +258,8 @@ body {
 }
 
 .tab.active {
-  border-bottom: 3px solid #e31c23;
-  color: #e31c23;
+  border-bottom: 3px solid #8b0000;
+  color: #8b0000;
 }
 
 /* 8) ALERT / FEEDBACK BANNERS
@@ -315,7 +315,7 @@ body {
 }
 
 .text-red {
-  color: #e31c23;
+  color: #8b0000;
 }
 
 .hidden {
@@ -406,8 +406,8 @@ body {
 
 /* Consistent page header structure */
 .page-header {
-  margin-top: 32px;
-  margin-bottom: 32px;
+  margin-top: 20px;
+  margin-bottom: 20px;
 }
 
 .page-header .page-title {
@@ -418,4 +418,40 @@ body {
   margin: 0;
   font-size: 1rem;
   color: #666666;
+}
+
+/* Player name consistency across all pages - UPDATED WITH STRONGER RULES */
+.player-name-display {
+  font-size: 1.5rem !important;
+  font-weight: bold !important;
+  margin: 0 !important;
+}
+
+/* Ensure h3 elements used for player names match this size */
+h3.player-name-display {
+  font-size: 1.5rem !important;
+  font-weight: bold !important;
+  margin: 0 !important;
+}
+
+/* Target any h3 with player name class specifically */
+h3[class*="player-name"] {
+  font-size: 1.5rem !important;
+  font-weight: bold !important;
+  margin: 0 !important;
+}
+
+/* Override any inline styles that might be making names larger */
+[style*="fontSize"] h3,
+[style*="font-size"] h3 {
+  font-size: 1.5rem !important;
+}
+
+/* Additional specific targeting */
+.seating-assignment-player-name,
+.player-info h3,
+.seating-player-name h3 {
+  font-size: 1.5rem !important;
+  font-weight: bold !important;
+  margin: 0 !important;
 }

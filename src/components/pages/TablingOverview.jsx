@@ -43,6 +43,11 @@ const TablingOverview = ({
   };
 
   const isTableDisabled = (tableNumber) => {
+    // Auto-disable table 6 in semifinals
+    if (selectedRound === 'semifinals' && tableNumber === 6) {
+      return true;
+    }
+    
     const key = getDisabledKey(selectedRound, selectedTimeSlot, tableNumber);
     return globalDisabledTables[key] || false;
   };
@@ -125,16 +130,16 @@ const TablingOverview = ({
             {isTableDisabled(tableNumber) ? (
               <div style={{ 
                 height: '80px', 
-                backgroundColor: '#666666', // Dark grey for disabled
-                border: '2px solid #ccc', // Normal border, not dashed
+                backgroundColor: '#666666',
+                border: '2px solid #ccc',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 color: '#ffffff',
                 fontSize: '0.9rem',
-                fontWeight: 'bold' // Make "Table Disabled" bold
+                fontWeight: 'bold'
               }}>
-                Table Disabled
+                {selectedRound === 'semifinals' && tableNumber === 6 ? 'Table Disabled (Semifinals)' : 'Table Disabled'}
               </div>
             ) : (
               <div style={{ display: 'flex', gap: '8px' }}>

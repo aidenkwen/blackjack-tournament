@@ -12,11 +12,11 @@ const PlayerSeatEdit = ({
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [playerRegistrations, setPlayerRegistrations] = useState([]);
-  const [selectedRegistrations, setSelectedRegistrations] = useState({});
-  const [originalSeating, setOriginalSeating] = useState({});
   const [showSeatingModal, setShowSeatingModal] = useState(false);
   const [modalRound, setModalRound] = useState(null);
   const [modalTimeSlot, setModalTimeSlot] = useState(null);
+  const [selectedPlayerInModal, setSelectedPlayerInModal] = useState(null);
+  const [selectedSeatInModal, setSelectedSeatInModal] = useState(null);
 
   const rounds = [
     { key: 'round1', name: 'Round 1', timeSlots: 6 },
@@ -31,12 +31,20 @@ const PlayerSeatEdit = ({
   const getDisabledKey = (round, timeSlot, tableNumber) => `${tournament.name}-${round}-${timeSlot}-${tableNumber}`;
 
   const isTableDisabled = (tableNumber, round, timeSlot) => {
+    // Auto-disable table 6 in semifinals
+    if (round === 'semifinals' && tableNumber === 6) {
+      return true;
+    }
+    
     const key = getDisabledKey(round, timeSlot, tableNumber);
     return globalDisabledTables[key] || false;
   };
 
   const searchPlayers = () => {
-    if (!searchTerm.trim()) {
+    // *** FIX: Ensure searchTerm is always a string ***
+    const searchTermString = String(searchTerm || '').trim();
+    
+    if (!searchTermString) {
       alert('Please enter a search term.');
       return;
     }
@@ -49,22 +57,19 @@ const PlayerSeatEdit = ({
       // Only search primary registrations, not rebuys or mulligans
       if (r.isRebuy || r.isMulligan) return false;
 
-      const term = searchTerm.toLowerCase();
+      const term = searchTermString.toLowerCase();
       
       // Safely check each field before calling .includes() or .toLowerCase()
       const matchesFirstName = r.firstName && r.firstName.toLowerCase().includes(term);
       const matchesLastName = r.lastName && r.lastName.toLowerCase().includes(term);
-      const matchesAccount = r.playerAccountNumber && r.playerAccountNumber.toString().includes(searchTerm);
+      const matchesAccount = r.playerAccountNumber && r.playerAccountNumber.toString().includes(searchTermString);
 
       return matchesFirstName || matchesLastName || matchesAccount;
     });
 
-
     if (found.length === 0) {
       alert('No players found matching your search.');
       setPlayerRegistrations([]);
-      setSelectedRegistrations({});
-      setOriginalSeating({});
       return;
     }
 
@@ -84,87 +89,10 @@ const PlayerSeatEdit = ({
       const index = parseInt(choice) - 1;
       const playerGroupsArray = Object.values(playerGroups);
       if (index >= 0 && index < playerGroupsArray.length) {
-        setupPlayerRegistrations(playerGroupsArray[index]);
+        setPlayerRegistrations(playerGroupsArray[index]);
       }
     } else {
-      setupPlayerRegistrations(Object.values(playerGroups)[0]);
-    }
-  };
-
-  const setupPlayerRegistrations = (regs) => {
-    setPlayerRegistrations(regs);
-    const selected = {};
-    const original = {};
-    regs.forEach(reg => {
-      selected[reg.id] = { tableNumber: reg.tableNumber, seatNumber: reg.seatNumber };
-      original[reg.id] = { tableNumber: reg.tableNumber, seatNumber: reg.seatNumber };
-    });
-    setSelectedRegistrations(selected);
-    setOriginalSeating(original);
-  };
-
-  const updateRegistrationSeating = (regId, updates) => {
-    setSelectedRegistrations(prev => ({ ...prev, [regId]: { ...prev[regId], ...updates } }));
-  };
-
-  const hasChanges = (regId) => {
-    const original = originalSeating[regId];
-    const selected = selectedRegistrations[regId];
-    if (!original || !selected) return false;
-    return (original.tableNumber !== selected.tableNumber || original.seatNumber !== selected.seatNumber);
-  };
-
-  const canUpdate = (regId) => {
-    const selected = selectedRegistrations[regId];
-    return selected && selected.tableNumber && selected.seatNumber && hasChanges(regId);
-  };
-
-  /**
-   * *** FIX 2: Transactional Seating Update ***
-   * This logic now correctly moves the player AND evicts anyone from the destination seat,
-   * preventing two players from occupying the same seat.
-   */
-  const confirmSeatingUpdate = (regId) => {
-    const regToMove = playerRegistrations.find(r => r.id === regId);
-    const newSeating = selectedRegistrations[regId];
-    const roundName = rounds.find(r => r.key === regToMove.round)?.name;
-
-    const confirmed = window.confirm(
-      `Update ${regToMove.firstName} ${regToMove.lastName}'s seating for ${roundName} to Table ${newSeating.tableNumber}, Seat ${newSeating.seatNumber}?`
-    );
-
-    if (confirmed) {
-      const updatedRegistrations = allRegistrations.map(r => {
-        // Condition 1: This is the registration we are moving.
-        if (r.id === regId) {
-          return { 
-            ...r, 
-            tableNumber: newSeating.tableNumber,
-            seatNumber: newSeating.seatNumber
-          };
-        }
-        
-        // Condition 2: This is a DIFFERENT registration that is currently in our target seat.
-        // It needs to be "evicted" (un-seated).
-        if (
-          r.id !== regId &&
-          r.round === regToMove.round &&
-          r.timeSlot === regToMove.timeSlot &&
-          r.tableNumber === newSeating.tableNumber &&
-          r.seatNumber === newSeating.seatNumber
-        ) {
-          return { ...r, tableNumber: null, seatNumber: null };
-        }
-        
-        // Condition 3: Any other registration. Leave it as is.
-        return r;
-      });
-
-      setRegistrations(updatedRegistrations);
-      
-      setOriginalSeating(prev => ({ ...prev, [regId]: { ...newSeating } }));
-      
-      alert('Player seating updated successfully.');
+      setPlayerRegistrations(Object.values(playerGroups)[0]);
     }
   };
 
@@ -172,6 +100,8 @@ const PlayerSeatEdit = ({
     setModalRound(round);
     setModalTimeSlot(timeSlot);
     setShowSeatingModal(true);
+    setSelectedPlayerInModal(null);
+    setSelectedSeatInModal(null);
   };
 
   const getPlayerAtSeat = (tableNumber, seatNumber, round, timeSlot) => {
@@ -184,50 +114,232 @@ const PlayerSeatEdit = ({
     );
   };
 
-  const getAvailableSeats = (round, timeSlot, tableNumber, currentRegId) => {
-    if (!round || !timeSlot || !tableNumber || isTableDisabled(tableNumber, round, timeSlot)) return [];
+  const handleSeatClickInModal = (tableNumber, seatNumber) => {
+    if (isTableDisabled(tableNumber, modalRound, modalTimeSlot)) return;
     
-    const occupiedSeats = registrations
-      .filter(r => 
-        r.eventName === tournament.name &&
-        r.round === round &&
-        r.timeSlot === timeSlot &&
-        r.tableNumber === tableNumber &&
-        r.id !== currentRegId // Exclude the player we are currently editing
-      )
-      .map(r => r.seatNumber);
-
-    return [1, 2, 3, 4, 5, 6].filter(seat => !occupiedSeats.includes(seat));
+    const player = getPlayerAtSeat(tableNumber, seatNumber, modalRound, modalTimeSlot);
+    
+    if (player) {
+      // Player clicked - select them for moving
+      setSelectedPlayerInModal(player);
+      setSelectedSeatInModal(null);
+    } else {
+      // Empty seat clicked
+      if (selectedPlayerInModal) {
+        // Move the selected player to this seat
+        confirmSeatMove(selectedPlayerInModal, tableNumber, seatNumber);
+      } else {
+        setSelectedSeatInModal({ table: tableNumber, seat: seatNumber });
+      }
+    }
   };
 
-  const getAvailableTables = (round, timeSlot) => {
-    return [1, 2, 3, 4, 5, 6].filter(table => !isTableDisabled(table, round, timeSlot));
+  const confirmSeatMove = (player, newTable, newSeat) => {
+    const roundName = rounds.find(r => r.key === modalRound)?.name;
+    
+    const confirmed = window.confirm(
+      `Move ${player.firstName} ${player.lastName} to Table ${newTable}, Seat ${newSeat} in ${roundName}?`
+    );
+
+    if (confirmed) {
+      const updatedRegistrations = allRegistrations.map(r => {
+        // Move the selected player
+        if (r.id === player.id) {
+          return { 
+            ...r, 
+            tableNumber: newTable,
+            seatNumber: newSeat
+          };
+        }
+        
+        // Evict anyone currently in the target seat
+        if (
+          r.id !== player.id &&
+          r.round === modalRound &&
+          r.timeSlot === modalTimeSlot &&
+          r.tableNumber === newTable &&
+          r.seatNumber === newSeat
+        ) {
+          return { ...r, tableNumber: null, seatNumber: null };
+        }
+        
+        return r;
+      });
+
+      setRegistrations(updatedRegistrations);
+      setSelectedPlayerInModal(null);
+      setSelectedSeatInModal(null);
+      
+      alert(`${player.firstName} ${player.lastName} moved successfully.`);
+    }
   };
 
-  // ... (The SeatingModal and the entire JSX return statement are fine, no changes needed there)
-  const SeatingModal = () => {
+  const removePlayerFromSeat = (player) => {
+    const roundName = rounds.find(r => r.key === modalRound)?.name;
+    
+    const confirmed = window.confirm(
+      `Remove ${player.firstName} ${player.lastName} from their seat in ${roundName}?`
+    );
+
+    if (confirmed) {
+      const updatedRegistrations = allRegistrations.map(r => {
+        if (r.id === player.id) {
+          return { ...r, tableNumber: null, seatNumber: null };
+        }
+        return r;
+      });
+
+      setRegistrations(updatedRegistrations);
+      setSelectedPlayerInModal(null);
+      alert(`${player.firstName} ${player.lastName} removed from seat.`);
+    }
+  };
+
+  const EditableSeatingModal = () => {
     if (!showSeatingModal || !modalRound || !modalTimeSlot) return null;
     const roundName = rounds.find(r => r.key === modalRound)?.name;
+    
     return (
       <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0, 0, 0, 0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-        <div style={{ backgroundColor: 'white', padding: '24px', borderRadius: '8px', maxWidth: '90%', maxHeight: '90%', overflow: 'auto' }}>
+        <div style={{ backgroundColor: 'white', padding: '24px', borderRadius: '8px', maxWidth: '95%', maxHeight: '90%', overflow: 'auto' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-            <h3 style={{ margin: 0 }}>{roundName} - Time Slot {modalTimeSlot} - Full Seating</h3>
-            <button onClick={() => setShowSeatingModal(false)} style={{ background: 'none', border: 'none', fontSize: '24px', cursor: 'pointer' }}>×</button>
+            <h3 style={{ margin: 0 }}>{roundName} - Time Slot {modalTimeSlot} - Edit Seating</h3>
+            <button 
+              onClick={() => {
+                setShowSeatingModal(false);
+                setSelectedPlayerInModal(null);
+                setSelectedSeatInModal(null);
+              }} 
+              style={{ background: 'none', border: 'none', fontSize: '24px', cursor: 'pointer' }}
+            >
+              ×
+            </button>
           </div>
+          
+          {selectedPlayerInModal && (
+            <div style={{ marginBottom: '16px', padding: '12px', backgroundColor: '#f0f8ff', border: '1px solid #ccc', borderRadius: '4px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span>
+                  <strong>Selected:</strong> {selectedPlayerInModal.firstName} {selectedPlayerInModal.lastName} 
+                  {selectedPlayerInModal.tableNumber && selectedPlayerInModal.seatNumber && 
+                    ` (Table ${selectedPlayerInModal.tableNumber}, Seat ${selectedPlayerInModal.seatNumber})`
+                  }
+                </span>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button 
+                    onClick={() => removePlayerFromSeat(selectedPlayerInModal)}
+                    className="btn"
+                    style={{ fontSize: '0.8rem', backgroundColor: '#dc3545', color: '#ffffff', border: 'none', padding: '4px 8px' }}
+                  >
+                    Remove from Seat
+                  </button>
+                  <button 
+                    onClick={() => setSelectedPlayerInModal(null)}
+                    className="btn btn-secondary"
+                    style={{ fontSize: '0.8rem', padding: '4px 8px' }}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+              <p style={{ margin: '8px 0 0 0', fontSize: '0.85rem', color: '#666' }}>
+                Click on an empty seat to move this player there.
+              </p>
+            </div>
+          )}
+          
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             {[1, 2, 3, 4, 5, 6].map(tableNumber => {
-              if (isTableDisabled(tableNumber, modalRound, modalTimeSlot)) return null;
+              if (isTableDisabled(tableNumber, modalRound, modalTimeSlot)) {
+                return (
+                  <div key={tableNumber} style={{ border: '1px solid #ddd', borderRadius: '8px', padding: '12px', backgroundColor: '#f2f2f2' }}>
+                    <h4 style={{ margin: '0 0 8px 0' }}>Table {tableNumber}</h4>
+                    <div style={{ 
+                      height: '60px', 
+                      backgroundColor: '#666666',
+                      border: '2px solid #ccc',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: '#ffffff',
+                      fontSize: '0.9rem',
+                      fontWeight: 'bold'
+                    }}>
+                      {modalRound === 'semifinals' && tableNumber === 6 ? 'Table Disabled (Semifinals)' : 'Table Disabled'}
+                    </div>
+                  </div>
+                );
+              }
+              
               return (
                 <div key={tableNumber} style={{ border: '1px solid #ddd', borderRadius: '8px', padding: '12px', backgroundColor: '#f2f2f2' }}>
                   <h4 style={{ margin: '0 0 8px 0' }}>Table {tableNumber}</h4>
                   <div style={{ display: 'flex', gap: '6px' }}>
                     {[1, 2, 3, 4, 5, 6].map(seatNumber => {
                       const player = getPlayerAtSeat(tableNumber, seatNumber, modalRound, modalTimeSlot);
+                      const isSelected = selectedPlayerInModal && selectedPlayerInModal.id === player?.id;
+                      const isTargetSeat = selectedSeatInModal?.table === tableNumber && selectedSeatInModal?.seat === seatNumber;
+                      
+                      let backgroundColor = '#ffffff';
+                      let textColor = '#000';
+                      let borderColor = '#ccc';
+                      
+                      if (player) {
+                        if (isSelected) {
+                          backgroundColor = '#ffd700'; // Gold for selected player
+                          textColor = '#000';
+                          borderColor = '#ffd700';
+                        } else {
+                          backgroundColor = '#666666';
+                          textColor = '#ffffff';
+                        }
+                      } else if (isTargetSeat) {
+                        backgroundColor = '#8b0000';
+                        textColor = '#ffffff';
+                        borderColor = '#8b0000';
+                      }
+                      
                       return (
-                        <div key={seatNumber} style={{ minHeight: '50px', minWidth: '70px', border: '1px solid #ccc', borderRadius: '4px', padding: '6px', backgroundColor: player ? '#666666' : '#ffffff', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', fontSize: '0.75rem', textAlign: 'center', flex: 1 }}>
-                          <div style={{ fontWeight: 'bold', marginBottom: '2px', color: player ? '#ffffff' : '#000' }}>Seat {seatNumber}</div>
-                          {player ? (<div style={{ color: '#ffffff', fontSize: '0.7rem' }}>{player.firstName} {player.lastName}</div>) : (<div style={{ color: '#999', fontSize: '0.7rem' }}>Empty</div>)}
+                        <div 
+                          key={seatNumber} 
+                          onClick={() => handleSeatClickInModal(tableNumber, seatNumber)}
+                          style={{ 
+                            minHeight: '50px', 
+                            minWidth: '70px', 
+                            border: `2px solid ${borderColor}`, 
+                            borderRadius: '4px', 
+                            padding: '6px', 
+                            backgroundColor, 
+                            display: 'flex', 
+                            flexDirection: 'column', 
+                            justifyContent: 'center', 
+                            alignItems: 'center', 
+                            fontSize: '0.75rem', 
+                            textAlign: 'center', 
+                            flex: 1,
+                            cursor: 'pointer',
+                            transition: 'all 0.2s ease'
+                          }}
+                          title={
+                            player 
+                              ? `${player.firstName} ${player.lastName} - Click to select`
+                              : selectedPlayerInModal 
+                                ? 'Click to move selected player here'
+                                : 'Empty seat'
+                          }
+                        >
+                          <div style={{ fontWeight: 'bold', marginBottom: '2px', color: textColor }}>
+                            Seat {seatNumber}
+                          </div>
+                          {player ? (
+                            <div style={{ color: textColor, fontSize: '0.7rem' }}>
+                              {player.firstName} {player.lastName}
+                            </div>
+                          ) : (
+                            <div style={{ color: textColor === '#ffffff' ? textColor : '#999', fontSize: '0.7rem' }}>
+                              Empty
+                            </div>
+                          )}
                         </div>
                       );
                     })}
@@ -236,63 +348,68 @@ const PlayerSeatEdit = ({
               );
             })}
           </div>
+          
+          <div style={{ marginTop: '16px', fontSize: '0.85rem', color: '#666' }}>
+            <p style={{ margin: '4px 0' }}><strong>Instructions:</strong></p>
+            <p style={{ margin: '4px 0' }}>• Click on a player to select them for moving</p>
+            <p style={{ margin: '4px 0' }}>• Click on an empty seat to move the selected player there</p>
+            <p style={{ margin: '4px 0' }}>• Use "Remove from Seat" to unseat a player</p>
+          </div>
         </div>
       </div>
     );
   };
+
   return (
     <div>
       <div style={{ marginBottom: '24px' }}>
         <div className="form-group">
           <label className="mb-2">Search Player</label>
-          <SearchBar searchValue={searchTerm} onSearchChange={(value) => setSearchTerm(UC(value))} onSearch={searchPlayers} placeholder="Enter name, account number, or swipe card" onCardSwipe={(cardNumber) => { setSearchTerm(UC(cardNumber)); setTimeout(() => searchPlayers(), 100); }}/>
+          <SearchBar 
+            searchValue={searchTerm} 
+            onSearchChange={(value) => setSearchTerm(UC(value))} 
+            onSearch={searchPlayers} 
+            placeholder="Enter name, account number, or swipe card" 
+            onCardSwipe={(cardNumber) => { 
+              setSearchTerm(UC(cardNumber)); 
+              setTimeout(() => searchPlayers(), 100); 
+            }}
+          />
         </div>
       </div>
+
       {playerRegistrations.length > 0 && (
         <div style={{ marginBottom: '24px' }}>
           <div style={{ marginBottom: '16px' }}>
-            <h3 style={{ margin: 0 }}>{playerRegistrations[0].firstName} {playerRegistrations[0].lastName}</h3>
+            <h3 className="player-name-display">{playerRegistrations[0].firstName} {playerRegistrations[0].lastName}</h3>
             <p style={{ margin: '4px 0 0 0', color: '#666' }}>Account: {playerRegistrations[0].playerAccountNumber}</p>
           </div>
           {playerRegistrations.map((reg) => {
-            const regId = reg.id;
-            const selected = selectedRegistrations[regId] || {};
-            const original = originalSeating[regId] || {};
             const roundName = rounds.find(r => r.key === reg.round)?.name;
             return (
-              <div key={regId} style={{ marginBottom: '16px', padding: '16px', border: '1px solid #ddd', borderRadius: '4px', backgroundColor: '#f9f9f9' }}>
+              <div key={reg.id} style={{ marginBottom: '16px', padding: '16px', border: '1px solid #ddd', borderRadius: '4px', backgroundColor: '#f9f9f9' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                   <h4 style={{ margin: 0 }}>{roundName} - Time Slot {reg.timeSlot}</h4>
-                  <button onClick={() => showFullSeating(reg.round, reg.timeSlot)} className="btn" style={{ fontSize: '0.8rem', backgroundColor: '#8b0000', color: '#ffffff', border: 'none', padding: '4px 8px' }}>View Full Seating</button>
+                  <button 
+                    onClick={() => showFullSeating(reg.round, reg.timeSlot)} 
+                    className="btn" 
+                    style={{ fontSize: '0.8rem', backgroundColor: '#8b0000', color: '#ffffff', border: 'none', padding: '4px 8px' }}
+                  >
+                    Edit Seating
+                  </button>
                 </div>
-                {original.tableNumber && original.seatNumber && (<p style={{ margin: '0 0 12px 0', fontSize: '0.85rem', color: '#666' }}>Current: Table {original.tableNumber}, Seat {original.seatNumber}</p>)}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px', marginBottom: '16px' }}>
-                  <div className="form-group">
-                    <label className="mb-2">Table</label>
-                    <select value={selected.tableNumber || ''} onChange={(e) => updateRegistrationSeating(regId, { tableNumber: parseInt(e.target.value) || null, seatNumber: null })} className="select-field">
-                      <option value="">-- Select Table --</option>
-                      {getAvailableTables(reg.round, reg.timeSlot).map(table => (<option key={table} value={table}>Table {table}</option>))}
-                    </select>
-                  </div>
-                  {selected.tableNumber && (
-                    <div className="form-group">
-                      <label className="mb-2">Seat</label>
-                      <select value={selected.seatNumber || ''} onChange={(e) => updateRegistrationSeating(regId, { seatNumber: parseInt(e.target.value) || null })} className="select-field">
-                        <option value="">-- Select Seat --</option>
-                        {getAvailableSeats(reg.round, reg.timeSlot, selected.tableNumber, regId).map(seat => (<option key={seat} value={seat}>Seat {seat}</option>))}
-                      </select>
-                    </div>
-                  )}
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                  <button onClick={() => confirmSeatingUpdate(regId)} className="btn btn-success" disabled={!canUpdate(regId)} style={{ opacity: canUpdate(regId) ? 1 : 0.5, cursor: canUpdate(regId) ? 'pointer' : 'not-allowed' }}>Update Seating</button>
-                </div>
+                <p style={{ margin: '0', fontSize: '0.9rem', color: '#666' }}>
+                  Current Seating: {reg.tableNumber && reg.seatNumber 
+                    ? `Table ${reg.tableNumber}, Seat ${reg.seatNumber}` 
+                    : 'Not seated'}
+                </p>
               </div>
             );
           })}
         </div>
       )}
-      <SeatingModal />
+      
+      <EditableSeatingModal />
     </div>
   );
 };

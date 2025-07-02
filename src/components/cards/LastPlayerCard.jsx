@@ -10,7 +10,7 @@ const LastPlayerCard = ({ lastPlayer, showSeatingInfo = false }) => {
         <p className="last-added-line">{lastPlayer.name}, {lastPlayer.accountNumber}</p>
         <p className="last-added-line">{lastPlayer.purchases}</p>
         {showSeatingInfo && lastPlayer.seatingInfo && (
-          <p className="last-added-line" style={{ color: '#8b0000', fontWeight: 'bold' }}>
+          <p className="last-added-line">
             {lastPlayer.seatingInfo}
           </p>
         )}
