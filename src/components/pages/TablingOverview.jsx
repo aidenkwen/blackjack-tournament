@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 
 const TablingOverview = ({ 
   tournament, 
@@ -19,7 +19,7 @@ const TablingOverview = ({
   ];
 
   // Function to get the most recent round with player activity
-  const getMostRecentRound = () => {
+  const getMostRecentRound = useCallback(() => {
     if (!registrations || registrations.length === 0) {
       return 'round1';
     }
@@ -33,7 +33,7 @@ const TablingOverview = ({
     }
     
     return 'round1';
-  };
+  }, [registrations]);
 
   const [selectedRound, setSelectedRound] = useState(() => getMostRecentRound());
   const [selectedTimeSlot, setSelectedTimeSlot] = useState('');
@@ -41,7 +41,7 @@ const TablingOverview = ({
   useEffect(() => {
     const mostRecentRound = getMostRecentRound();
     setSelectedRound(mostRecentRound);
-  }, [registrations]);
+  }, [getMostRecentRound]);
 
   const currentRound = rounds.find(r => r.key === selectedRound);
   const availableTimeSlots = Array.from({ length: currentRound?.timeSlots || 1 }, (_, i) => i + 1);
