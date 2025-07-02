@@ -679,7 +679,7 @@ const RegistrationPage = ({
             </p>
           </div>
           <div style={{ display: 'flex', gap: '12px' }}>
-            <button onClick={() => setCurrentPage(2.5)} className="btn btn-white-red">Player Seating</button>
+            <button onClick={() => setCurrentPage(2.5)} className="btn btn-white-red">Manage Tournament</button>
             <button onClick={() => setCurrentPage(3, true)} className="btn btn-primary">Export Data</button>
           </div>
         </div>

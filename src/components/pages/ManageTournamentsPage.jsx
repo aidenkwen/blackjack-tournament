@@ -108,7 +108,7 @@ const ManageTournamentsPage = ({
                     className="btn btn-secondary"
                     style={{ fontSize: '0.9rem' }}
                   >
-                    Manage Tabling
+                    Manage Tournament
                   </button>
                   
                   <button
