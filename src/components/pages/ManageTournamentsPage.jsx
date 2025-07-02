@@ -1,66 +1,45 @@
-import React, { useState } from 'react';
-import TablingManagement from './TablingManagement';
+import React from 'react';
+import { useTournamentContext } from '../../context/TournamentContext';
+import { useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast';
 
-const ManageTournamentsPage = ({
-  tournaments,
-  deleteTournament,
-  selectedEvent,
-  registrations,
-  setRegistrations,
-  globalDisabledTables,
-  setGlobalDisabledTables,
-  onBack
-}) => {
-  const [selectedTournament, setSelectedTournament] = useState(null);
+const ManageTournamentsPage = () => {
+  const navigate = useNavigate();
+  const { tournaments, deleteTournament, selectedEvent, setSelectedEvent } = useTournamentContext();
 
   const handleDeleteTournament = async (tournamentToDelete) => {
+    if (selectedEvent === tournamentToDelete.name) {
+      toast.error('Cannot delete the currently active tournament. Please select a different event first.');
+      return;
+    }
     const confirmDelete = window.confirm(
-      `Are you sure you want to delete "${tournamentToDelete.name}"?\n\nThis will also delete all players and registrations for this tournament.\n\nThis action cannot be undone.`
+      `Are you sure you want to delete "${tournamentToDelete.name}"? This will delete all associated players and registrations. This action cannot be undone.`
     );
-
     if (confirmDelete) {
       try {
         await deleteTournament(tournamentToDelete.id);
-        alert(`Tournament "${tournamentToDelete.name}" deleted successfully.`);
+        toast.success(`Tournament "${tournamentToDelete.name}" deleted successfully.`);
       } catch (error) {
-        alert(`Error deleting tournament: ${error.message}`);
+        toast.error(`Error deleting tournament: ${error.message}`);
       }
     }
   };
 
-  const handleTournamentClick = (tournament) => {
-    setSelectedTournament(tournament);
+  const handleManageClick = (tournament) => {
+    setSelectedEvent(tournament.name);
+    navigate('/tabling');
   };
-
-  const handleBackToList = () => {
-    setSelectedTournament(null);
-  };
-
-  if (selectedTournament) {
-    return (
-      <TablingManagement
-        tournament={selectedTournament}
-        registrations={registrations}
-        setRegistrations={setRegistrations}
-        globalDisabledTables={globalDisabledTables}
-        setGlobalDisabledTables={setGlobalDisabledTables}
-        onBack={handleBackToList}
-      />
-    );
-  }
 
   return (
     <div className="container">
-      <button onClick={onBack} className="link-back link-back-block">
+      <button onClick={() => navigate('/')} className="link-back link-back-block">
         {'<'} Back to Event Selection
       </button>
 
       <h1 className="page-title">Manage Tournaments</h1>
 
       {tournaments.length === 0 ? (
-        <p className="subheading">
-          No custom tournaments yet.
-        </p>
+        <p className="subheading">No custom tournaments yet.</p>
       ) : (
         <div>
           <p className="subheading">
@@ -68,17 +47,7 @@ const ManageTournamentsPage = ({
           </p>
 
           {tournaments.map((tournament) => (
-            <div
-              key={tournament.id}
-              className="card"
-              style={{
-                marginBottom: '12px',
-                backgroundColor: selectedEvent === tournament.name ? '#f5f5f5' : '#f2f2f2',
-                borderColor: selectedEvent === tournament.name ? '#8b0000' : '#d9d9d9',
-                padding: '16px',
-                cursor: 'default'
-              }}
-            >
+            <div key={tournament.id} className="card" style={{ /* ... */ }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div style={{ flex: 1 }}>
                   <p className="tournament-name">
@@ -92,46 +61,19 @@ const ManageTournamentsPage = ({
                   <p className="tournament-metadata">
                     Entry: ${tournament.entryCost} • Rebuy: ${tournament.rebuyCost} • Mulligan: ${tournament.mulliganCost}
                   </p>
-                  {tournament.createdDate && (
+                  {tournament.createdAt && (
                     <p className="tournament-metadata">
-                      Created: {new Date(tournament.createdDate).toLocaleDateString()}
+                      Created: {new Date(tournament.createdAt).toLocaleDateString()}
                     </p>
                   )}
                 </div>
 
                 <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleTournamentClick(tournament);
-                    }}
-                    className="btn btn-secondary"
-                    style={{ fontSize: '0.9rem' }}
-                  >
-                    Manage Tournament
+                  <button onClick={() => handleManageClick(tournament)} className="btn btn-secondary" style={{ fontSize: '0.9rem' }}>
+                    Manage Seating
                   </button>
-                  
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (selectedEvent === tournament.name) {
-                        alert('Cannot delete the currently active tournament.');
-                        return;
-                      }
-                      handleDeleteTournament(tournament);
-                    }}
-                    className="btn"
-                    disabled={selectedEvent === tournament.name}
-                    style={{ 
-                      fontSize: '0.9rem',
-                      backgroundColor: selectedEvent === tournament.name ? '#cccccc' : '#8b0000',
-                      color: '#ffffff',
-                      border: 'none',
-                      cursor: selectedEvent === tournament.name ? 'not-allowed' : 'pointer',
-                      opacity: selectedEvent === tournament.name ? 0.6 : 1
-                    }}
-                  >
-                    Delete Tournament
+                  <button onClick={() => handleDeleteTournament(tournament)} className="btn" disabled={selectedEvent === tournament.name} style={{ /* ... */ }}>
+                    Delete
                   </button>
                 </div>
               </div>

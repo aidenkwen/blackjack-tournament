@@ -1,13 +1,18 @@
 import React, { useState } from 'react';
 import { UC } from '../../utils/formatting';
+import { useTournamentContext } from '../../context/TournamentContext';
+import { useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast';
 
-const AddTournamentPage = ({
-  tournaments,
-  addTournament,
-  uploadPlayersFile,
-  loading,
-  onBack
-}) => {
+const AddTournamentPage = () => {
+  const navigate = useNavigate();
+  const { 
+    tournaments, 
+    addTournament, 
+    uploadPlayersFile, 
+    playersLoading 
+  } = useTournamentContext();
+
   const [tournamentName, setTournamentName] = useState('');
   const [entryCost, setEntryCost] = useState('500');
   const [rebuyCost, setRebuyCost] = useState('500');
@@ -19,80 +24,50 @@ const AddTournamentPage = ({
 
   const handleAddTournament = async () => {
     if (!tournamentName.trim()) {
-      alert('Please enter a tournament name.');
+      toast.error('Please enter a tournament name.');
       return;
     }
-
     if (tournaments.some(t => t.name.toLowerCase() === tournamentName.trim().toLowerCase())) {
-      alert('A tournament with this name already exists.');
+      toast.error('A tournament with this name already exists.');
       return;
     }
-
     const entry = parseInt(entryCost);
     const rebuy = parseInt(rebuyCost);
     const mulligan = parseInt(mulliganCost);
-
     if (isNaN(entry) || entry < 0) {
-      alert('Please enter a valid entry cost.');
+      toast.error('Please enter a valid entry cost.');
       return;
     }
     if (isNaN(rebuy) || rebuy < 0) {
-      alert('Please enter a valid rebuy cost.');
+      toast.error('Please enter a valid rebuy cost.');
       return;
     }
     if (isNaN(mulligan) || mulligan < 0) {
-      alert('Please enter a valid mulligan cost.');
+      toast.error('Please enter a valid mulligan cost.');
       return;
     }
 
     try {
       setImporting(true);
-      
       const newTournament = {
         name: tournamentName.trim(),
         entryCost: entry,
         rebuyCost: rebuy,
         mulliganCost: mulligan
       };
-
       await addTournament(newTournament);
-      console.log('✅ Tournament created successfully');
-      
-      console.log('📁 Now uploading file to tournament...');
+      toast.success(`Tournament "${newTournament.name}" created!`);
       
       const result = await uploadPlayersFile(tournamentName.trim(), selectedFile);
       
-      let message = `Tournament "${newTournament.name}" created successfully!\n\n`;
-      message += `Player upload: ${result.recordsInserted} out of ${result.totalRows} records processed.`;
+      let message = `Player upload: ${result.recordsInserted} of ${result.totalRows} processed.`;
+      if (result.errorCount > 0) message += `\n${result.errorCount} rows had errors.`;
+      toast.success(message, { duration: 5000 });
       
-      if (result.errorCount > 0) {
-        message += `\n\n${result.errorCount} rows had errors and were skipped.`;
-        if (result.errors && result.errors.length > 0) {
-          message += '\n\nFirst few errors:';
-          result.errors.forEach(error => {
-            message += `\n• ${error}`;
-          });
-          if (result.hasMoreErrors) {
-            message += '\n• ...and more';
-          }
-        }
-      }
-      
-      alert(message);
-      
-      setTournamentName('');
-      setEntryCost('500');
-      setRebuyCost('500');
-      setMulliganCost('100');
-      setFileUploaded(false);
-      setUploadedFileName('');
-      setSelectedFile(null);
-      
-      onBack();
+      navigate('/');
       
     } catch (error) {
-      console.error('Error:', error);
-      alert(`Error: ${error.message}`);
+      toast.error(`Error: ${error.message}`);
     } finally {
       setImporting(false);
     }
@@ -104,10 +79,9 @@ const AddTournamentPage = ({
       const allowedTypes = ['.csv', '.xlsx', '.xls'];
       const fileExtension = file.name.toLowerCase().substring(file.name.lastIndexOf('.'));
       if (!allowedTypes.includes(fileExtension)) {
-        alert('Please select a valid CSV or Excel file (.csv, .xlsx, .xls).');
+        toast.error('Please select a valid CSV or Excel file.');
         return;
       }
-
       setSelectedFile(file);
       setUploadedFileName(file.name);
       setFileUploaded(true);
@@ -119,7 +93,7 @@ const AddTournamentPage = ({
   return (
     <div className="container">
       <button
-        onClick={onBack}
+        onClick={() => navigate('/')}
         className="link-back link-back-block"
       >
         {'<'} Back to Event Selection
@@ -127,12 +101,11 @@ const AddTournamentPage = ({
 
       <h1 className="page-title">Add Custom Tournament</h1>
 
-      {loading && (
-        <div className="alert alert-info" style={{ backgroundColor: '#f8f9fa', color: '#6c757d', border: '1px solid #dee2e6' }}>
-          Loading tournaments data...
-        </div>
+      {playersLoading && (
+        <div className="alert alert-info">Loading...</div>
       )}
 
+      {/* Form elements remain the same */}
       <div className="form-group">
         <label className="mb-2">Tournament Name</label>
         <input
@@ -208,7 +181,6 @@ const AddTournamentPage = ({
             disabled={importing}
             required
           />
-          
           {importing ? (
             <div>
               <div 
@@ -264,10 +236,6 @@ const AddTournamentPage = ({
         onClick={handleAddTournament}
         className={`btn ${isFormValid ? 'btn-success' : 'btn-secondary'}`}
         disabled={!isFormValid}
-        style={{
-          opacity: isFormValid ? 1 : 0.6,
-          cursor: isFormValid ? 'pointer' : 'not-allowed'
-        }}
       >
         {importing ? 'Creating Tournament...' : 'Create Tournament'}
       </button>

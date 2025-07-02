@@ -1,6 +1,9 @@
-import React, { useState } from 'react';
+import React from 'react';
 import './Blackjack.css';
-import { useTournaments, useTournamentPlayers, useRegistrations } from './hooks/useapidata';
+import { Routes, Route } from 'react-router-dom'; // Import routing components
+import { useTournamentContext } from './context/TournamentContext'; // Import our hook
+
+// Import Page Components
 import EventSelectionPage from './components/pages/EventSelectionPage';
 import AddTournamentPage from './components/pages/AddTournamentPage';
 import ManageTournamentsPage from './components/pages/ManageTournamentsPage';
@@ -9,59 +12,12 @@ import SeatingAssignmentPage from './components/pages/SeatingAssignmentPage';
 import TablingManagement from './components/pages/TablingManagement';
 import ExportPage from './components/pages/ExportPage';
 import { Toaster } from 'react-hot-toast';
-import toast from 'react-hot-toast';
 
 const App = () => {
-  const [currentPage, setCurrentPage] = useState(0);
-  const [selectedEvent, setSelectedEvent] = useState('');
-  const [employee, setEmployee] = useState('');
-  const [lastRegisteredPlayer, setLastRegisteredPlayer] = useState(null);
-  const [pendingRegistration, setPendingRegistration] = useState(null);
-  
-  const [globalDisabledTables, setGlobalDisabledTables] = useState({});
-  
-  const [lastActiveTab, setLastActiveTab] = useState('registration');
-  const [lastSelectedRound, setLastSelectedRound] = useState('round1');
-  const [lastSelectedTimeSlot, setLastSelectedTimeSlot] = useState(1);
+  // Get only what's needed for error checking from the context
+  const { tournamentsError, playersError, registrationsError } = useTournamentContext();
 
-  const { 
-    tournaments, 
-    loading: tournamentsLoading, 
-    error: tournamentsError, 
-    addTournament, 
-    deleteTournament 
-  } = useTournaments();
-
-  const { 
-    tournamentPlayers, 
-    setTournamentPlayers,
-    getCurrentTournamentPlayers, 
-    setCurrentTournamentPlayers,
-    uploadPlayersFile,
-    loading: playersLoading,
-    error: playersError 
-  } = useTournamentPlayers(selectedEvent);
-
-  const { 
-    registrations, 
-    setRegistrations,
-    addRegistration,
-    loading: registrationsLoading,
-    error: registrationsError 
-  } = useRegistrations(selectedEvent);
-
-  const exportBackup = () => toast.error('Backup endpoint not implemented.');
-  const importBackup = (event) => {
-    toast.error('Restore endpoint not implemented.');
-    event.target.value = '';
-  };
-  const clearAllData = () => {
-    const confirmed = window.confirm(
-      'This will delete ALL tournaments, players, and registrations from the database. This cannot be undone. Are you sure?'
-    );
-    if (confirmed) toast.error('Clear All Data endpoint not implemented.');
-  };
-
+  // Error boundary remains the same
   if (tournamentsError || playersError || registrationsError) {
     return (
       <div className="container">
@@ -80,125 +36,26 @@ const App = () => {
       <Toaster 
         position="top-center"
         toastOptions={{
-          // Default options for ALL toasts
           style: {
-            background: '#EEEEEE', // Light Grey for ALL toasts
-            color: '#000000',     // Dark text for ALL toasts
+            background: '#EEEEEE',
+            color: '#000000',
             border: '1px solid rgba(0, 0, 0, 0.1)',
           },
-          
-          // You can still have specific durations without changing the style
-          error: {
-            duration: 4000,
-            // FIX: Removed the style block from here
-          },
-          success: {
-            duration: 2500,
-            // FIX: Removed the style block from here
-          }
+          error: { duration: 4000 },
+          success: { duration: 2500 },
         }}
       />
       
-      {currentPage === 0 && (
-        <EventSelectionPage
-          selectedEvent={selectedEvent}
-          setSelectedEvent={setSelectedEvent}
-          employee={employee}
-          setEmployee={setEmployee}
-          tournaments={tournaments}
-          loading={tournamentsLoading}
-          onContinue={() => setCurrentPage(1)}
-          onAddTournament={() => setCurrentPage(0.5)}
-          onManageTournaments={() => setCurrentPage(0.6)}
-          onExportBackup={exportBackup}
-          onImportBackup={importBackup}
-          onClearAllData={clearAllData}
-        />
-      )}
-      {currentPage === 0.5 && (
-        <AddTournamentPage
-          tournaments={tournaments}
-          addTournament={addTournament}
-          masterData={getCurrentTournamentPlayers()}
-          setMasterData={setCurrentTournamentPlayers}
-          tournamentPlayers={tournamentPlayers}
-          setTournamentPlayers={setTournamentPlayers}
-          uploadPlayersFile={uploadPlayersFile}
-          loading={playersLoading}
-          onBack={() => setCurrentPage(0)}
-        />
-      )}
-      {currentPage === 0.6 && (
-        <ManageTournamentsPage
-          tournaments={tournaments}
-          deleteTournament={deleteTournament}
-          selectedEvent={selectedEvent}
-          registrations={registrations}
-          setRegistrations={setRegistrations}
-          globalDisabledTables={globalDisabledTables}
-          setGlobalDisabledTables={setGlobalDisabledTables}
-          onBack={() => setCurrentPage(0)}
-        />
-      )}
-      {currentPage === 1 && (
-        <RegistrationPage
-          activeTab={lastActiveTab}
-          selectedRound={lastSelectedRound}
-          selectedTimeSlot={lastSelectedTimeSlot}
-          setActiveTab={setLastActiveTab}
-          setSelectedRound={setLastSelectedRound}
-          setSelectedTimeSlot={setLastSelectedTimeSlot}
-          selectedEvent={selectedEvent}
-          employee={employee}
-          tournaments={tournaments}
-          masterData={getCurrentTournamentPlayers()}
-          setMasterData={setCurrentTournamentPlayers}
-          registrations={registrations}
-          setRegistrations={setRegistrations}
-          addRegistration={addRegistration}
-          setCurrentPage={setCurrentPage}
-          setLastRegisteredPlayer={setLastRegisteredPlayer}
-          pendingRegistration={pendingRegistration}
-          setPendingRegistration={setPendingRegistration}
-          loading={registrationsLoading}
-          globalDisabledTables={globalDisabledTables}
-          setGlobalDisabledTables={setGlobalDisabledTables}
-        />
-      )}
-      {currentPage === 2 && (
-        <SeatingAssignmentPage
-          selectedEvent={selectedEvent}
-          tournaments={tournaments}
-          registrations={registrations}
-          setRegistrations={setRegistrations}
-          lastRegisteredPlayer={lastRegisteredPlayer}
-          pendingRegistration={pendingRegistration}
-          setPendingRegistration={setPendingRegistration}
-          setCurrentPage={setCurrentPage}
-          globalDisabledTables={globalDisabledTables}
-          setGlobalDisabledTables={setGlobalDisabledTables}
-        />
-      )}
-      {currentPage === 2.5 && (
-        <TablingManagement
-          selectedEvent={selectedEvent}
-          tournaments={tournaments}
-          registrations={registrations}
-          setRegistrations={setRegistrations}
-          globalDisabledTables={globalDisabledTables}
-          setGlobalDisabledTables={setGlobalDisabledTables}
-          onBack={() => setCurrentPage(1)}
-        />
-      )}
-      {currentPage === 3 && (
-        <ExportPage
-          selectedEvent={selectedEvent}
-          employee={employee}
-          masterData={getCurrentTournamentPlayers()}
-          registrations={registrations}
-          setCurrentPage={setCurrentPage}
-        />
-      )}
+      {/* The old currentPage logic is replaced with declarative routing */}
+      <Routes>
+        <Route path="/" element={<EventSelectionPage />} />
+        <Route path="/add-tournament" element={<AddTournamentPage />} />
+        <Route path="/manage-tournaments" element={<ManageTournamentsPage />} />
+        <Route path="/register" element={<RegistrationPage />} />
+        <Route path="/seating" element={<SeatingAssignmentPage />} />
+        <Route path="/tabling" element={<TablingManagement />} />
+        <Route path="/export" element={<ExportPage />} />
+      </Routes>
     </>
   );
 };

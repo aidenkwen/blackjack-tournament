@@ -9,6 +9,7 @@ import PlayerInfoCard from '../cards/PlayerInfoCard';
 const RegistrationForm = ({ hook, activeTab, selectedRound, currentTournament }) => {
   const [searchAccount, setSearchAccount] = useState('');
 
+  // FIX: Connect the SearchBar to the hook's search function
   const handleSearch = () => {
     hook.searchPlayer(searchAccount);
   };
@@ -20,12 +21,11 @@ const RegistrationForm = ({ hook, activeTab, selectedRound, currentTournament })
   
   const getButtonText = () => {
     if (activeTab === 'registration') {
-      return hook.addMulligan ? 'Register Player and Add Mulligan' : 'Register Player';
+      return hook.addMulligan ? 'Register Player & Add Mulligan' : 'Register Player';
     }
-    return hook.addMulligan ? 'Check In and Add Mulligan' : 'Check In';
+    return hook.addMulligan ? 'Check In & Add Mulligan' : 'Check In';
   };
   
-  // Determine if the payment card should be shown
   const showPaymentCard = activeTab === 'registration' || (hook.rounds.find(r => r.key === selectedRound)?.isRebuy);
 
   return (
@@ -42,7 +42,14 @@ const RegistrationForm = ({ hook, activeTab, selectedRound, currentTournament })
         <NewPlayerForm
           accountNumber={searchAccount}
           currentTournament={currentTournament}
-          // onSave, onCancel would need to be passed down from the hook
+          // FIX: Pass the save/cancel handlers from the hook
+          onSave={hook.handleNewPlayerSave} 
+          onCancel={hook.clearForm}
+          host={hook.host}
+          setHost={hook.setHost}
+          comments={hook.comments}
+          setComments={hook.setComments}
+          canRegisterForRound1={activeTab === 'registration'}
         />
       )}
 
@@ -67,6 +74,7 @@ const RegistrationForm = ({ hook, activeTab, selectedRound, currentTournament })
               currentPlayer={hook.currentPlayer}
               currentTournament={currentTournament}
               getPaymentTypes={() => ['Cash', 'Credit', 'Chips', 'Comp']}
+              // FIX: Connect the payment card's handler to the hook's handler
               handlePaymentTypeChange={hook.handlePaymentTypeChange}
             />
           )}
@@ -92,6 +100,7 @@ const RegistrationForm = ({ hook, activeTab, selectedRound, currentTournament })
             <textarea value={hook.comments} onChange={(e) => hook.setComments(UC(e.target.value))} className="textarea-field" rows="3"/>
           </div>
 
+          {/* FIX: Connect the main action button to the hook's registration handler */}
           <button onClick={hook.handleRegistration} className="btn btn-success">
             {getButtonText()}
           </button>

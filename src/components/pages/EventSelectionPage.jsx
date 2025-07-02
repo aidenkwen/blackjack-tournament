@@ -1,17 +1,25 @@
-
 import React from 'react';
 import { UC } from '../../utils/formatting';
+import { useTournamentContext } from '../../context/TournamentContext';
+import { useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast';
 
-const EventSelectionPage = ({
-  selectedEvent,
-  setSelectedEvent,
-  employee,
-  setEmployee,
-  tournaments,
-  onContinue,
-  onAddTournament,
-  onManageTournaments
-}) => {
+const EventSelectionPage = () => {
+  const navigate = useNavigate();
+  const { 
+    selectedEvent, setSelectedEvent, 
+    employee, setEmployee, 
+    tournaments, tournamentsLoading 
+  } = useTournamentContext();
+
+  const handleContinue = () => {
+    if (!selectedEvent || !employee) {
+      toast.error('Please select an event and enter an employee ID.');
+      return;
+    }
+    navigate('/register');
+  };
+
   const allEvents = tournaments.map(t => t.name);
 
   return (
@@ -49,24 +57,24 @@ const EventSelectionPage = ({
 
       <div className="button-group">
         <button
-          onClick={onContinue}
-          disabled={!selectedEvent || !employee}
+          onClick={handleContinue}
+          disabled={!selectedEvent || !employee || tournamentsLoading}
           className={`btn btn-primary ${
             !selectedEvent || !employee ? 'btn-disabled' : ''
           }`}
         >
-          Continue to Registration
+          {tournamentsLoading ? 'Loading...' : 'Continue to Registration'}
         </button>
         
         <button
-          onClick={onAddTournament}
+          onClick={() => navigate('/add-tournament')}
           className="btn btn-white-red"
         >
           Add Custom Tournament
         </button>
 
         <button
-          onClick={onManageTournaments}
+          onClick={() => navigate('/manage-tournaments')}
           className="btn btn-secondary"
         >
           Manage Tournaments

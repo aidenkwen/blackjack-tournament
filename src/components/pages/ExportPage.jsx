@@ -1,30 +1,12 @@
 import React, { useState } from 'react';
 import Papa from 'papaparse';
+import { useTournamentContext } from '../../context/TournamentContext';
+import { useNavigate } from 'react-router-dom';
 
-// Utility function to normalize player data from various possible field names
-const normalizePlayerData = (playerData) => {
-  if (!playerData) return {};
-  return {
-    playerAccountNumber: playerData.PlayerAccountNumber || 
-                        playerData['Player Account Number'] || 
-                        playerData.playerAccountNumber || 
-                        playerData.AccountNumber,
-    firstName: playerData.FirstName || 
-               playerData['First Name'] || 
-               playerData.firstName,
-    lastName: playerData.LastName || 
-              playerData['Last Name'] || 
-              playerData.lastName,
-    entryType: playerData.EntryType || 
-               playerData['Entry Type'] || 
-               playerData.entryType,
-    host: playerData.Host || 
-          playerData.host || 
-          ''
-  };
-};
-
-const ExportPage = ({ selectedEvent, employee, masterData, registrations, setCurrentPage }) => {
+const ExportPage = () => {
+  const navigate = useNavigate();
+  const { selectedEvent, employee, masterData, registrations } = useTournamentContext();
+  
   const [exportType, setExportType] = useState('registrations');
   const [selectedExportRound, setSelectedExportRound] = useState('');
 
@@ -37,6 +19,18 @@ const ExportPage = ({ selectedEvent, employee, masterData, registrations, setCur
     { key: 'quarterfinals', name: 'Quarterfinals' },
     { key: 'semifinals', name: 'Semifinals' }
   ];
+  
+  const normalizePlayerData = (playerData) => {
+    if (!playerData) return {};
+    return {
+      playerAccountNumber: playerData.PlayerAccountNumber || playerData['Player Account Number'] || playerData.playerAccountNumber || playerData.AccountNumber,
+      firstName: playerData.FirstName || playerData['First Name'] || playerData.firstName,
+      lastName: playerData.LastName || playerData['Last Name'] || playerData.lastName,
+      entryType: playerData.EntryType || playerData['Entry Type'] || playerData.entryType,
+      host: playerData.Host || playerData.host || ''
+    };
+  };
+
 
   const exportData = () => {
     if (!selectedExportRound) {
@@ -71,9 +65,7 @@ const ExportPage = ({ selectedEvent, employee, masterData, registrations, setCur
           SeatNumber: r.seatNumber
         }));
 
-      filename = `${selectedEvent}_${roundKey}_Registrations_${new Date()
-        .toISOString()
-        .split('T')[0]}.csv`;
+      filename = `${selectedEvent}_${roundKey}_Registrations_${new Date().toISOString().split('T')[0]}.csv`;
     } else {
       const roundRegistrations = registrations.filter((r) => r.round === roundKey);
       const combinedData = [];
@@ -92,10 +84,7 @@ const ExportPage = ({ selectedEvent, employee, masterData, registrations, setCur
             UploadedDate: new Date().toISOString(),
             Host: normalizedPlayer.host,
             Employee: employee,
-            Round: null,
-            TimeSlot: null,
-            TableNumber: null,
-            SeatNumber: null
+            Round: null, TimeSlot: null, TableNumber: null, SeatNumber: null
           };
         }));
       }
@@ -121,9 +110,7 @@ const ExportPage = ({ selectedEvent, employee, masterData, registrations, setCur
       })));
 
       dataToExport = combinedData;
-      filename = `${selectedEvent}_${roundKey}_Complete_${new Date()
-        .toISOString()
-        .split('T')[0]}.csv`;
+      filename = `${selectedEvent}_${roundKey}_Complete_${new Date().toISOString().split('T')[0]}.csv`;
     }
 
     const csv = Papa.unparse(dataToExport);
@@ -134,16 +121,12 @@ const ExportPage = ({ selectedEvent, employee, masterData, registrations, setCur
     a.download = filename;
     a.click();
     window.URL.revokeObjectURL(url);
-
     alert(`Exported ${dataToExport.length} records`);
   };
 
   return (
     <div className="container">
-      <button
-        onClick={() => setCurrentPage(1)}
-        className="link-back link-back-block"
-      >
+      <button onClick={() => navigate('/register')} className="link-back link-back-block">
         {'<'} Back to Registration
       </button>
 
@@ -181,9 +164,9 @@ const ExportPage = ({ selectedEvent, employee, masterData, registrations, setCur
 
       <button
         onClick={exportData}
-        disabled={registrations.length === 0}
+        disabled={!registrations || registrations.length === 0}
         className={`btn btn-success ${
-          registrations.length === 0 ? 'btn-disabled' : ''
+          !registrations || registrations.length === 0 ? 'btn-disabled' : ''
         }`}
       >
         Export Data
