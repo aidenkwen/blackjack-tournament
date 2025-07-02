@@ -11,14 +11,6 @@ const PlayerInfoCard = ({ currentPlayer, activeTab, selectedRound }) => {
     { key: 'semifinals', name: 'Semifinals' }
   ];
 
-  const getRoundName = () => {
-    if (activeTab === 'registration') {
-      return 'Round 1';
-    }
-    const round = rounds.find(r => r.key === selectedRound);
-    return round ? round.name : selectedRound;
-  };
-
   return (
     <div className="player-info-container">
       <h3 className="player-name-with-account">
