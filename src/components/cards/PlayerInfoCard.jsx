@@ -25,10 +25,6 @@ const PlayerInfoCard = ({ currentPlayer, activeTab, selectedRound }) => {
         {currentPlayer.firstName} {currentPlayer.lastName}
         <span className="account-part">, {currentPlayer.playerAccountNumber}</span>
       </h3>
-      <p className="player-metadata">
-        {/* FIX: Re-added the "Registering for" text to use the function. */}
-        Entry Type: {currentPlayer.entryType} • Registering for: {getRoundName()}
-      </p>
     </div>
   );
 };
