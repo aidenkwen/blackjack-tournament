@@ -9,15 +9,15 @@ const SeatingAssignmentPage = () => {
   const { 
     selectedEvent,
     registrations, setRegistrations,
-    lastRegisteredPlayer,
     pendingRegistration, setPendingRegistration,
+    setLastRegisteredPlayer,
+    globalDisabledTables // Use from context instead of local state
   } = useTournamentContext();
-  
+
   const [selectedSeat, setSelectedSeat] = useState(null);
   const [confirming, setConfirming] = useState(false);
   const [seatPreferences, setSeatPreferences] = useState([]);
   const [conflictTables, setConflictTables] = useState(new Set());
-  const [globalDisabledTables] = useState({});
 
   const rounds = [
     { key: 'round1', name: 'Round 1', timeSlots: 6 },
@@ -45,7 +45,7 @@ const SeatingAssignmentPage = () => {
     return slots[slotNumber - 1] || `Slot ${slotNumber}`;
   };
 
-  if (!lastRegisteredPlayer || !pendingRegistration) {
+  if (!pendingRegistration) {
     return (
       <div className="container">
         <button onClick={() => navigate('/register')} className="link-back link-back-block">
@@ -57,27 +57,32 @@ const SeatingAssignmentPage = () => {
     );
   }
   
+  // FIXED: Use pendingRegistration data instead of lastRegisteredPlayer
+  const currentPlayerRound = pendingRegistration.selectedRound;
+  const currentPlayerTimeSlot = pendingRegistration.selectedTimeSlot;
+  const currentPlayer = pendingRegistration.player;
+  
   const handleBack = () => navigate('/register');
-  const currentRound = rounds.find(r => r.key === lastRegisteredPlayer.round);
-  const timeSlotName = getTimeSlotName(lastRegisteredPlayer.round, lastRegisteredPlayer.timeSlot);
+  const currentRound = rounds.find(r => r.key === currentPlayerRound);
+  const timeSlotName = getTimeSlotName(currentPlayerRound, currentPlayerTimeSlot);
   const getDisabledKey = (round, timeSlot, tableNumber) => `${selectedEvent}-${round}-${timeSlot}-${tableNumber}`;
   const isTableConflicted = (tableNumber) => conflictTables.has(tableNumber);
   const isTableDisabled = (tableNumber) => {
-    if (lastRegisteredPlayer.round === 'semifinals' && tableNumber === 6) return true;
-    const key = getDisabledKey(lastRegisteredPlayer.round, lastRegisteredPlayer.timeSlot, tableNumber);
+    if (currentPlayerRound === 'semifinals' && tableNumber === 6) return true;
+    const key = getDisabledKey(currentPlayerRound, currentPlayerTimeSlot, tableNumber);
     return globalDisabledTables[key] || false;
   };
   const isTableUnavailable = (tableNumber) => isTableDisabled(tableNumber) || isTableConflicted(tableNumber);
   const getPlayerAtSeat = (tableNumber, seatNumber) => registrations.find(r => 
     r.eventName === selectedEvent && 
-    r.round === lastRegisteredPlayer.round && 
-    r.timeSlot === lastRegisteredPlayer.timeSlot && 
+    r.round === currentPlayerRound && 
+    r.timeSlot === currentPlayerTimeSlot && 
     r.tableNumber === tableNumber && 
     r.seatNumber === seatNumber
   );
   const isCurrentPlayerSeat = (tableNumber, seatNumber) => {
     const player = getPlayerAtSeat(tableNumber, seatNumber);
-    return player && player.playerAccountNumber === lastRegisteredPlayer.playerAccountNumber;
+    return player && player.playerAccountNumber === currentPlayer.playerAccountNumber;
   };
 
   const getAvailableSeats = () => {
@@ -135,17 +140,34 @@ const SeatingAssignmentPage = () => {
       return; 
     } 
     setConfirming(true); 
-    const finalRegistrations = [
-      ...registrations, 
-      ...pendingRegistration.registrations.map(reg => ({
-        ...reg,
-        tableNumber: selectedSeat.table,
-        seatNumber: selectedSeat.seat,
-        timeSlot: lastRegisteredPlayer.timeSlot
-      }))
-    ];
-    setRegistrations(finalRegistrations); 
-    toast.success(`${lastRegisteredPlayer.firstName} assigned to Table ${selectedSeat.table}, Seat ${selectedSeat.seat}`); 
+    
+    // FIXED: Update registrations by mapping over existing ones instead of adding duplicates
+    setRegistrations(prevRegistrations => {
+      return prevRegistrations.map(reg => {
+        // Find the pending registrations and assign seating
+        const isPendingReg = pendingRegistration.registrations.some(pr => pr.id === reg.id);
+        if (isPendingReg) {
+          return {
+            ...reg,
+            tableNumber: selectedSeat.table,
+            seatNumber: selectedSeat.seat,
+            timeSlot: currentPlayerTimeSlot
+          };
+        }
+        return reg;
+      });
+    });
+    
+    // FIXED: Now set lastRegisteredPlayer since seating is complete
+    setLastRegisteredPlayer({
+      playerAccountNumber: currentPlayer.playerAccountNumber,
+      firstName: currentPlayer.firstName,
+      lastName: currentPlayer.lastName,
+      round: currentPlayerRound,
+      timeSlot: currentPlayerTimeSlot
+    });
+    
+    toast.success(`${currentPlayer.firstName} assigned to Table ${selectedSeat.table}, Seat ${selectedSeat.seat}`); 
     setPendingRegistration(null); 
     navigate('/register'); 
   };
@@ -166,9 +188,9 @@ const SeatingAssignmentPage = () => {
         <div>
           <div className="player-info-container">
             <h3 className="player-name-with-account">
-              {pendingRegistration.player.firstName} {pendingRegistration.player.lastName}<span className="account-part">, {pendingRegistration.player.playerAccountNumber}</span>
+              {currentPlayer.firstName} {currentPlayer.lastName}<span className="account-part">, {currentPlayer.playerAccountNumber}</span>
             </h3>
-            <p className="player-metadata">Entry Type: {pendingRegistration.player.entryType}</p>
+            <p className="player-metadata">Entry Type: {currentPlayer.entryType}</p>
           </div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -204,7 +226,7 @@ const SeatingAssignmentPage = () => {
             </div>
             {isTableDisabled(tableNumber) ? (
               <div style={{ height: '80px', boxSizing: 'border-box', borderRadius: '4px', backgroundColor: '#666666', border: '2px solid #ccc', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ffffff', fontSize: '0.9rem', fontWeight: 'bold' }}>
-                {lastRegisteredPlayer.round === 'semifinals' && tableNumber === 6 ? 'Table Disabled (Semifinals)' : 'Table Disabled'}
+                {currentPlayerRound === 'semifinals' && tableNumber === 6 ? 'Table Disabled (Semifinals)' : 'Table Disabled'}
               </div>
             ) : isTableConflicted(tableNumber) ? (
               <div style={{ height: '80px', boxSizing: 'border-box', borderRadius: '4px', backgroundColor: '#666666', border: '2px solid #ccc', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ffffff', fontSize: '0.9rem', fontWeight: 'bold', cursor: 'pointer' }} onClick={() => toggleConflictTable(tableNumber)} title="Click to remove conflict restriction">

@@ -1,4 +1,4 @@
-// Updated RoundRegistrationForm with actual times
+// Updated RoundRegistrationForm with simplified LastPlayerCard logic
 import React from 'react';
 import { UC } from '../../utils/formatting';
 import SearchBar from '../common/SearchBar';
@@ -61,17 +61,15 @@ const RoundRegistrationForm = ({ hook, currentRound, currentRoundInfo, currentTo
     return slots.map((name, index) => ({ value: index + 1, name }));
   };
 
+  // FIXED: Simplified button text - no more "Check In"
   const getButtonText = () => {
     if (hook.addMulligan) {
       return `Register for ${currentRoundInfo.name} & Add Mulligan`;
     }
-    if (currentRoundInfo.isRebuy) {
-      return `Check In for ${currentRoundInfo.name}`;
-    }
     return `Register for ${currentRoundInfo.name}`;
   };
 
-  // Create lastPlayer object for LastPlayerCard - hide when search result is shown
+  // SIMPLIFIED: Create lastPlayer object for LastPlayerCard
   const createLastPlayerData = () => {
     // Hide LastPlayerCard when there's a current player or new player form showing
     if (hook.currentPlayer || hook.showNewPlayerForm) return null;
@@ -87,20 +85,28 @@ const RoundRegistrationForm = ({ hook, currentRound, currentRoundInfo, currentTo
     const mainRegistration = playerRegistrations.find(r => !r.isMulligan);
     const mulliganRegistration = playerRegistrations.find(r => r.isMulligan);
     
-    // Build purchases string
+    // SIMPLIFIED: Build purchases string using new eventType logic
     let purchases = '';
     if (mainRegistration) {
-      if (mainRegistration.paymentType === 'Comp' || mainRegistration.paymentAmount === 0) {
+      if (mainRegistration.eventType === 'COMP') {
         purchases = `COMP ${currentRoundInfo.name}`;
+      } else if (mainRegistration.eventType === 'PAY') {
+        // Show payment method and amount for PAY
+        purchases = `${currentRoundInfo.name} ${mainRegistration.paymentType || 'Cash'} $${mainRegistration.paymentAmount}`;
       } else {
-        purchases = `${currentRoundInfo.name} ${mainRegistration.paymentAmount}`;
+        // Fallback
+        purchases = `${currentRoundInfo.name} $${mainRegistration.paymentAmount || 0}`;
       }
     } else {
       purchases = `Registered for ${currentRoundInfo.name}`;
     }
     
     if (mulliganRegistration) {
-      purchases += ` + Mulligan ${mulliganRegistration.paymentAmount}`;
+      if (mulliganRegistration.paymentType === 'Comp') {
+        purchases += ` + COMP Mulligan`;
+      } else {
+        purchases += ` + Mulligan ${mulliganRegistration.paymentType || 'Cash'} $${mulliganRegistration.paymentAmount}`;
+      }
     }
 
     // Get the actual time name for the time slot
@@ -165,7 +171,7 @@ const RoundRegistrationForm = ({ hook, currentRound, currentRoundInfo, currentTo
             selectedRound={currentRound} 
           />
 
-          {/* Time Slot Selection - Now shows actual times */}
+          {/* Time Slot Selection */}
           <div className="card" style={{ marginBottom: '16px' }}>
             <h4 style={{ margin: '0 0 16px 0', fontSize: '1.1rem' }}>
               Time Slot for {currentRoundInfo.name}
@@ -188,27 +194,25 @@ const RoundRegistrationForm = ({ hook, currentRound, currentRoundInfo, currentTo
             </div>
           </div>
 
-          {/* Payment Card - Only show if payment is required */}
-          {(currentRound !== 'round1' || hook.currentPlayer.entryType !== 'COMP') && (
-            <PaymentCard
-              activeTab="registration"
-              selectedRound={currentRound}
-              paymentType={hook.paymentType}
-              setPaymentType={hook.setPaymentType}
-              paymentAmount={hook.paymentAmount}
-              setPaymentAmount={hook.setPaymentAmount}
-              splitPayment={hook.splitPayment}
-              setSplitPayment={hook.setSplitPayment}
-              paymentType2={hook.paymentType2}
-              setPaymentType2={hook.setPaymentType2}
-              paymentAmount2={hook.paymentAmount2}
-              setPaymentAmount2={hook.setPaymentAmount2}
-              currentPlayer={hook.currentPlayer}
-              currentTournament={currentTournament}
-              getPaymentTypes={() => ['Cash', 'Credit', 'Chips', 'Comp']}
-              handlePaymentTypeChange={hook.handlePaymentTypeChange}
-            />
-          )}
+          {/* Payment Card - Always show, but pre-populate for COMP players */}
+          <PaymentCard
+            activeTab="registration"
+            selectedRound={currentRound}
+            paymentType={hook.paymentType}
+            setPaymentType={hook.setPaymentType}
+            paymentAmount={hook.paymentAmount}
+            setPaymentAmount={hook.setPaymentAmount}
+            splitPayment={hook.splitPayment}
+            setSplitPayment={hook.setSplitPayment}
+            paymentType2={hook.paymentType2}
+            setPaymentType2={hook.setPaymentType2}
+            paymentAmount2={hook.paymentAmount2}
+            setPaymentAmount2={hook.setPaymentAmount2}
+            currentPlayer={hook.currentPlayer}
+            currentTournament={currentTournament}
+            getPaymentTypes={() => ['Cash', 'Credit', 'Chips', 'Comp']}
+            handlePaymentTypeChange={hook.handlePaymentTypeChange}
+          />
 
           <MulliganCard
             addMulligan={hook.addMulligan}

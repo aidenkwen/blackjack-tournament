@@ -55,7 +55,6 @@ export const useRoundRegistration = ({
   const [comments, setComments] = useState('');
   const [host, setHost] = useState('');
 
-  // Simple clear form function with useCallback to prevent unnecessary re-renders
   const clearForm = useCallback(() => {
     setSearchAccount('');
     setCurrentPlayer(null);
@@ -105,6 +104,21 @@ export const useRoundRegistration = ({
       r.isMulligan === true
     ), [currentTournamentRegistrations]);
 
+  // FIXED: Simplified eventType logic - it's just about how they paid
+  const determineEventType = useCallback((paymentType, playerEntryType, currentRound) => {
+    // Mulligan is always "Mulligan"
+    if (paymentType === 'Comp') {
+      return 'COMP'; // They got it for free
+    } else if (paymentType === 'Cash' || paymentType === 'Credit' || paymentType === 'Chips') {
+      return 'PAY'; // They paid money
+    } else if (currentRound === 'round1' && playerEntryType === 'COMP' && !paymentType) {
+      // COMP players in Round 1 without explicit payment selection default to COMP
+      return 'COMP';
+    } else {
+      return 'PAY'; // Default to PAY
+    }
+  }, []);
+
   const handleRegistration = useCallback(() => {
     if (!currentPlayer) return;
     if (!validateTimeSlot(selectedTimeSlot)) {
@@ -130,17 +144,16 @@ export const useRoundRegistration = ({
     const isFirstTimeRegistration = existingRegIndex === -1;
     const isUpdate = !isFirstTimeRegistration;
     
-    // Check if this is a time slot change
-    const existingReg = existingRegIndex > -1 ? allRegistrations[existingRegIndex] : null;
-    const isTimeSlotChange = existingReg && existingReg.timeSlot !== currentTimeSlot;
-
-    // Validate payment amounts with normalized values
-    if (currentRoundInfo.isRebuy || currentRound !== 'round1') {
-      if (!paymentType) {
-        toast.error(`Please select payment type for ${currentRoundInfo.name}.`);
-        return;
-      }
-      const required = paymentType === 'Comp' ? 0 : currentRoundInfo.cost;
+    // FIXED: Simplified validation - just check if payment is required and valid
+    const needsPayment = !(currentRound === 'round1' && normalizedPlayer.entryType === 'COMP' && !paymentType);
+    
+    if (needsPayment && !paymentType) {
+      toast.error(`Please select payment type for ${currentRoundInfo.name}.`);
+      return;
+    }
+    
+    if (paymentType && paymentType !== 'Comp') {
+      const required = currentRoundInfo.cost;
       const amount1 = normalizePaymentAmount(paymentAmount);
       const amount2 = splitPayment ? normalizePaymentAmount(paymentAmount2) : 0;
       if (!amountsMatch(required, amount1, amount2)) {
@@ -162,44 +175,41 @@ export const useRoundRegistration = ({
       }
     }
 
+    // Check if this is a time slot change
+    const existingReg = existingRegIndex > -1 ? allRegistrations[existingRegIndex] : null;
+    const isTimeSlotChange = existingReg && existingReg.timeSlot !== currentTimeSlot;
+
     let needsSeating = false;
     let actionTaken = false;
 
-    // FIXED: Use functional update to batch all registration changes
+    // Use functional update to batch all registration changes
     setRegistrations(prevRegistrations => {
       let updatedRegistrations = [...prevRegistrations];
 
       // Handle main registration
       if (isUpdate) {
-        // Always update existing registration in place (never create duplicates)
+        // Update existing registration
         updatedRegistrations = updatedRegistrations.map(r => {
           if (r.playerAccountNumber === normalizedPlayer.playerAccountNumber && 
               r.round === currentRound && 
               !r.isMulligan) {
-            let eventType = 'CHECK-IN';
-            let reqPayment = currentRound !== 'round1' || paymentType !== 'Comp';
             
-            if (reqPayment && paymentType) {
-              const totalAmount = normalizePaymentAmount(paymentAmount) + (splitPayment ? normalizePaymentAmount(paymentAmount2) : 0);
-              if (paymentType === 'Comp') {
-                eventType = currentRoundInfo.isRebuy ? 'COMP REBUY' : 'COMP $0';
-              } else {
-                eventType = currentRoundInfo.isRebuy ? `REBUY ${totalAmount}` : `PAY ${totalAmount}`;
-              }
-            }
+            // FIXED: Simple eventType based only on how they paid
+            const newEventType = determineEventType(paymentType, normalizedPlayer.entryType, currentRound);
+            const finalPaymentType = newEventType === 'COMP' ? 'Comp' : paymentType;
 
             return {
               ...r,
-              eventType,
-              paymentType: reqPayment ? paymentType : null,
-              paymentAmount: reqPayment ? normalizePaymentAmount(paymentAmount) : 0,
-              paymentType2: (reqPayment && splitPayment) ? paymentType2 : null,
-              paymentAmount2: (reqPayment && splitPayment) ? normalizePaymentAmount(paymentAmount2) : null,
-              registrationDate: new Date().toISOString(), // Update timestamp
+              eventType: newEventType, // Simple: PAY, COMP
+              entryType: normalizedPlayer.entryType, // Preserve original EntryType
+              paymentType: finalPaymentType,
+              paymentAmount: normalizePaymentAmount(paymentAmount),
+              paymentType2: splitPayment ? paymentType2 : null,
+              paymentAmount2: splitPayment ? normalizePaymentAmount(paymentAmount2) : null,
+              registrationDate: new Date().toISOString(),
               host,
               comment: comments,
               timeSlot: currentTimeSlot,
-              // FIXED: Only clear seating when time slot changes
               tableNumber: isTimeSlotChange ? null : r.tableNumber,
               seatNumber: isTimeSlotChange ? null : r.seatNumber
             };
@@ -207,21 +217,14 @@ export const useRoundRegistration = ({
           return r;
         });
         
-        needsSeating = isTimeSlotChange; // Only need reseating if time slot changed
+        needsSeating = isTimeSlotChange;
         actionTaken = true;
       } else {
-        // Create new registration (first time only)
-        let eventType = 'CHECK-IN';
-        let reqPayment = currentRound !== 'round1' || paymentType !== 'Comp';
+        // Create new registration
         
-        if (reqPayment && paymentType) {
-          const totalAmount = normalizePaymentAmount(paymentAmount) + (splitPayment ? normalizePaymentAmount(paymentAmount2) : 0);
-          if (paymentType === 'Comp') {
-            eventType = currentRoundInfo.isRebuy ? 'COMP REBUY' : 'COMP $0';
-          } else {
-            eventType = currentRoundInfo.isRebuy ? `REBUY ${totalAmount}` : `PAY ${totalAmount}`;
-          }
-        }
+        // FIXED: Simple eventType logic
+        const eventType = determineEventType(paymentType, normalizedPlayer.entryType, currentRound);
+        const finalPaymentType = eventType === 'COMP' ? 'Comp' : paymentType;
 
         const newReg = {
           id: crypto.randomUUID(),
@@ -229,11 +232,12 @@ export const useRoundRegistration = ({
           firstName: normalizedPlayer.firstName,
           lastName: normalizedPlayer.lastName,
           eventName: selectedEvent,
-          eventType,
-          paymentType: reqPayment ? paymentType : null,
-          paymentAmount: reqPayment ? normalizePaymentAmount(paymentAmount) : 0,
-          paymentType2: (reqPayment && splitPayment) ? paymentType2 : null,
-          paymentAmount2: (reqPayment && splitPayment) ? normalizePaymentAmount(paymentAmount2) : null,
+          eventType: eventType, // Simple: PAY, COMP
+          entryType: normalizedPlayer.entryType, // Original EntryType from import
+          paymentType: finalPaymentType,
+          paymentAmount: normalizePaymentAmount(paymentAmount),
+          paymentType2: splitPayment ? paymentType2 : null,
+          paymentAmount2: splitPayment ? normalizePaymentAmount(paymentAmount2) : null,
           registrationDate: new Date().toISOString(),
           host,
           comment: comments,
@@ -251,25 +255,26 @@ export const useRoundRegistration = ({
         needsSeating = true;
       }
 
-      // Handle mulligan separately
+      // Handle mulligan separately - ALWAYS eventType = "Mulligan"
       if (addMulligan) {
         if (existingMulliganIndex > -1) {
-          // Update existing mulligan in place
+          // Update existing mulligan
           updatedRegistrations = updatedRegistrations.map(r => {
             if (r.playerAccountNumber === normalizedPlayer.playerAccountNumber && 
                 r.round === currentRound && 
                 r.isMulligan) {
               return {
                 ...r,
+                eventType: 'Mulligan', // Always "Mulligan"
+                entryType: normalizedPlayer.entryType,
                 paymentType: mulliganPaymentType,
                 paymentAmount: normalizePaymentAmount(mulliganAmount),
                 paymentType2: splitMulliganPayment ? mulliganPaymentType2 : null,
                 paymentAmount2: splitMulliganPayment ? normalizePaymentAmount(mulliganAmount2) : null,
-                registrationDate: new Date().toISOString(), // Update timestamp
+                registrationDate: new Date().toISOString(),
                 host,
                 comment: comments,
                 timeSlot: currentTimeSlot,
-                // Only clear mulligan seating if time slot changed
                 tableNumber: isTimeSlotChange ? null : r.tableNumber,
                 seatNumber: isTimeSlotChange ? null : r.seatNumber
               };
@@ -284,7 +289,8 @@ export const useRoundRegistration = ({
             firstName: normalizedPlayer.firstName,
             lastName: normalizedPlayer.lastName,
             eventName: selectedEvent,
-            eventType: 'MULLIGAN',
+            eventType: 'Mulligan', // Always "Mulligan"
+            entryType: normalizedPlayer.entryType,
             paymentType: mulliganPaymentType,
             paymentAmount: normalizePaymentAmount(mulliganAmount),
             paymentType2: splitMulliganPayment ? mulliganPaymentType2 : null,
@@ -304,7 +310,7 @@ export const useRoundRegistration = ({
         }
         actionTaken = true;
       } else if (existingMulliganIndex > -1) {
-        // Remove mulligan if checkbox is unchecked (don't affect main registration)
+        // Remove mulligan if checkbox is unchecked
         updatedRegistrations = updatedRegistrations.filter(r => 
           !(r.playerAccountNumber === normalizedPlayer.playerAccountNumber && 
             r.round === currentRound && 
@@ -323,7 +329,6 @@ export const useRoundRegistration = ({
 
     // Set up pending registration for seating ONLY if needed
     if (needsSeating) {
-      // Use setTimeout to ensure registrations state has updated
       setTimeout(() => {
         setRegistrations(currentRegs => {
           const finalPendingRegs = currentRegs.filter(r => 
@@ -331,7 +336,7 @@ export const useRoundRegistration = ({
             r.round === currentRound
           );
           
-          setPendingRegistration({
+          const pendingRegData = {
             registrations: finalPendingRegs,
             player: normalizedPlayer,
             activeTab: 'registration',
@@ -340,29 +345,32 @@ export const useRoundRegistration = ({
             paymentType, paymentAmount, splitPayment, paymentType2, paymentAmount2,
             addMulligan, mulliganPaymentType, mulliganAmount,
             splitMulliganPayment, mulliganPaymentType2, mulliganAmount2, host, comments
-          });
-
-          setLastRegisteredPlayer({
-            playerAccountNumber: normalizedPlayer.playerAccountNumber,
-            firstName: normalizedPlayer.firstName,
-            lastName: normalizedPlayer.lastName,
-            round: currentRound,
-            timeSlot: currentTimeSlot
-          });
-
+          };
+          
+          setPendingRegistration(pendingRegData);
+          
+          setTimeout(() => {
+            onSeatingNeeded();
+          }, 50);
+          
           return currentRegs;
         });
-      }, 0);
+      }, 100);
+    } else {
+      // Only set lastRegisteredPlayer for updates that don't need seating
+      setLastRegisteredPlayer({
+        playerAccountNumber: normalizedPlayer.playerAccountNumber,
+        firstName: normalizedPlayer.firstName,
+        lastName: normalizedPlayer.lastName,
+        round: currentRound,
+        timeSlot: currentTimeSlot
+      });
     }
 
-    // Success messages
+    // FIXED: Better success messages that don't mention "check-in"
     let successMessage = '';
     if (isFirstTimeRegistration) {
-      if (currentRoundInfo.isRebuy) {
-        successMessage = `${normalizedPlayer.firstName} checked in for ${currentRoundInfo.name}!`;
-      } else {
-        successMessage = `${normalizedPlayer.firstName} registered for ${currentRoundInfo.name}!`;
-      }
+      successMessage = `${normalizedPlayer.firstName} registered for ${currentRoundInfo.name}!`;
     } else if (isTimeSlotChange) {
       successMessage = `${normalizedPlayer.firstName} moved to Time Slot ${currentTimeSlot} for ${currentRoundInfo.name}!`;
     } else {
@@ -371,10 +379,7 @@ export const useRoundRegistration = ({
 
     toast.success(successMessage);
 
-    if (needsSeating) {
-      onSeatingNeeded();
-    } else {
-      // Clear the form and search result after successful update
+    if (!needsSeating) {
       setComments('');
       setCurrentPlayer(null);
       setSearchAccount('');
@@ -385,7 +390,7 @@ export const useRoundRegistration = ({
     mulliganAmount, splitMulliganPayment, mulliganPaymentType2, mulliganAmount2, 
     comments, host, allRegistrations, currentRound, selectedEvent, employee, 
     currentTournament.mulliganCost, setRegistrations, setPendingRegistration, 
-    setLastRegisteredPlayer, onSeatingNeeded
+    setLastRegisteredPlayer, onSeatingNeeded, determineEventType
   ]);
 
   const searchPlayer = useCallback((searchAccountParam) => {
@@ -443,16 +448,14 @@ export const useRoundRegistration = ({
         setHost(existingReg.host || '');
         setComments(existingReg.comment || '');
       } else {
-        // New registration - set defaults
+        // New registration - set defaults based on EntryType
         setSelectedTimeSlot('');
-        if (currentRound === 'round1') {
-          const playerEntryType = normalizedPlayer.entryType === 'COMP' ? 'COMP' : 'PAY';
-          if (playerEntryType === 'COMP') {
-            handlePaymentTypeChange('Comp');
-          } else {
-            setPaymentAmount(currentRoundInfo.cost.toString());
-          }
+        if (currentRound === 'round1' && normalizedPlayer.entryType === 'COMP') {
+          // COMP players get Comp pre-selected but can change it
+          setPaymentType('Comp');
+          setPaymentAmount('0');
         } else {
+          setPaymentType('');
           setPaymentAmount(currentRoundInfo.cost.toString());
         }
       }
@@ -486,7 +489,7 @@ export const useRoundRegistration = ({
         toast.error('Player not found. New players can only be added in Round 1.');
       }
     }
-  }, [masterData, currentRound, currentRoundInfo.name, currentRoundInfo.cost, isRegisteredForRound, handlePaymentTypeChange, allRegistrations, currentTournament.mulliganCost]);
+  }, [masterData, currentRound, currentRoundInfo.name, currentRoundInfo.cost, isRegisteredForRound, allRegistrations, currentTournament.mulliganCost]);
 
   const handleNewPlayerSave = useCallback((newPlayer, registerImmediately, registrationData) => {
     if (masterData.some(p => 
@@ -505,7 +508,7 @@ export const useRoundRegistration = ({
       setCurrentPlayer(normalizedPlayer);
       setShowNewPlayerForm(false);
       
-      // Set form data from registration - use functional updates
+      // Set form data from registration
       setSelectedTimeSlot(() => registrationData.selectedTimeSlot);
       setPaymentType(() => registrationData.paymentType);
       setPaymentAmount(() => registrationData.paymentAmount);

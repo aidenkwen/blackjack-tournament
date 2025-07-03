@@ -1,4 +1,4 @@
-import React, { createContext, useState, useContext, useCallback } from 'react';
+import React, { createContext, useState, useContext, useCallback, useEffect } from 'react';
 import { useTournaments, useTournamentPlayers, useRegistrations } from '../hooks/useapidata';
 
 // 1. Create the Context
@@ -32,6 +32,26 @@ export const TournamentProvider = ({ children }) => {
     showNewPlayerForm: false,
     lastSearchResults: null
   });
+
+  // Add disabled tables state with localStorage persistence
+  const [globalDisabledTables, setGlobalDisabledTables] = useState(() => {
+    try {
+      const stored = localStorage.getItem('blackjack_disabled_tables');
+      return stored ? JSON.parse(stored) : {};
+    } catch (error) {
+      console.error('Error loading disabled tables:', error);
+      return {};
+    }
+  });
+
+  // Save to localStorage whenever globalDisabledTables changes
+  useEffect(() => {
+    try {
+      localStorage.setItem('blackjack_disabled_tables', JSON.stringify(globalDisabledTables));
+    } catch (error) {
+      console.error('Error saving disabled tables:', error);
+    }
+  }, [globalDisabledTables]);
 
   // FIXED: Use useCallback for state management functions to prevent unnecessary re-renders
   const saveSearchState = useCallback((searchData) => {
@@ -81,6 +101,7 @@ export const TournamentProvider = ({ children }) => {
     lastSelectedTimeSlot,
     lastRoundPreferences,
     persistentSearchData,
+    globalDisabledTables,
     
     // Setters
     setSelectedEvent,
@@ -91,6 +112,7 @@ export const TournamentProvider = ({ children }) => {
     setLastSelectedRound,
     setLastSelectedTimeSlot,
     setLastRoundPreferences,
+    setGlobalDisabledTables,
 
     // Search state management functions
     saveSearchState,
@@ -119,11 +141,12 @@ export const TournamentProvider = ({ children }) => {
   }), [
     selectedEvent, employee, lastRegisteredPlayer, pendingRegistration,
     lastActiveTab, lastSelectedRound, lastSelectedTimeSlot, lastRoundPreferences,
-    persistentSearchData, saveSearchState, clearSearchState, clearTournamentContext,
-    restoreSearchState, tournamentsApi.tournaments, tournamentsApi.loading,
-    tournamentsApi.error, tournamentsApi.addTournament, tournamentsApi.deleteTournament,
-    playersApi, registrationsApi.registrations, registrationsApi.setRegistrations,
-    registrationsApi.addRegistration, registrationsApi.loading, registrationsApi.error
+    persistentSearchData, globalDisabledTables, saveSearchState, clearSearchState, 
+    clearTournamentContext, restoreSearchState, tournamentsApi.tournaments, 
+    tournamentsApi.loading, tournamentsApi.error, tournamentsApi.addTournament, 
+    tournamentsApi.deleteTournament, playersApi, registrationsApi.registrations, 
+    registrationsApi.setRegistrations, registrationsApi.addRegistration, 
+    registrationsApi.loading, registrationsApi.error
   ]);
 
   return (

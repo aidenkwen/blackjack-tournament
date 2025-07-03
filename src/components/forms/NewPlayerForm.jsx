@@ -1,4 +1,4 @@
-// Updated NewPlayerForm with actual times
+// Simplified NewPlayerForm 
 import React, { useState } from 'react';
 import { UC } from '../../utils/formatting';
 
@@ -40,25 +40,31 @@ const NewPlayerForm = ({
     { value: 6, name: '12:45 PM' }
   ];
 
+  // SIMPLIFIED: Entry type change handler
   const handleEntryTypeChange = (newEntryType) => {
     setEntryType(newEntryType);
     if (newEntryType === 'COMP') {
       setPaymentType('Comp');
       setPaymentAmount('0');
-    } else if (entryType === 'COMP' || paymentAmount === '0') {
+      setSplitPayment(false);
+      setPaymentType2('');
+      setPaymentAmount2('');
+    } else {
       setPaymentType('');
       setPaymentAmount(currentTournament.entryCost.toString());
     }
   };
 
+  // SIMPLIFIED: Payment type change handler
   const handlePaymentTypeChange = (newPaymentType) => {
     setPaymentType(newPaymentType);
     if (newPaymentType === 'Comp') {
       setPaymentAmount('0');
-      setEntryType('COMP');
-    } else if (paymentType === 'Comp' || paymentAmount === '0') {
+      setSplitPayment(false);
+      setPaymentType2('');
+      setPaymentAmount2('');
+    } else {
       setPaymentAmount(currentTournament.entryCost.toString());
-      setEntryType('PAY');
     }
   };
 
@@ -81,13 +87,14 @@ const NewPlayerForm = ({
       host: host
     };
 
+    // SIMPLIFIED: Registration data setup
     const registrationData = {
       selectedTimeSlot,
-      paymentType,
-      paymentAmount,
-      splitPayment,
-      paymentType2,
-      paymentAmount2,
+      paymentType: paymentType || (entryType === 'COMP' ? 'Comp' : ''),
+      paymentAmount: paymentAmount,
+      splitPayment: splitPayment,
+      paymentType2: paymentType2,
+      paymentAmount2: paymentAmount2,
       addMulligan,
       mulliganPaymentType,
       mulliganAmount,
@@ -293,7 +300,7 @@ const NewPlayerForm = ({
                             className="select-field"
                           >
                             <option value="">-- Select payment type --</option>
-                            {['Cash', 'Credit', 'Chips'].map((type) => (
+                            {getPaymentTypes().map((type) => (
                               <option key={type} value={type}>
                                 {type}
                               </option>
@@ -311,6 +318,7 @@ const NewPlayerForm = ({
                             onChange={(e) => setMulliganAmount(e.target.value)}
                             className="input-field"
                             placeholder={currentTournament.mulliganCost.toString()}
+                            disabled={mulliganPaymentType === 'Comp'}
                           />
                         </div>
                       </div>
@@ -322,13 +330,14 @@ const NewPlayerForm = ({
                           type="checkbox"
                           checked={splitMulliganPayment}
                           onChange={(e) => setSplitMulliganPayment(e.target.checked)}
+                          disabled={mulliganPaymentType === 'Comp'}
                         />
                         {' '}
                         Split Mulligan Payment
                       </label>
                     </div>
 
-                    {splitMulliganPayment && (
+                    {splitMulliganPayment && mulliganPaymentType !== 'Comp' && (
                       <div style={{ display: 'flex', gap: '16px' }}>
                         <div style={{ flex: 1 }}>
                           <div className="form-group">
@@ -339,7 +348,7 @@ const NewPlayerForm = ({
                               className="select-field"
                             >
                               <option value="">-- Select payment type --</option>
-                              {['Cash', 'Credit', 'Chips'].filter(type => type !== mulliganPaymentType).map((type) => (
+                              {getPaymentTypes().filter(type => type !== mulliganPaymentType).map((type) => (
                                 <option key={type} value={type}>
                                   {type}
                                 </option>

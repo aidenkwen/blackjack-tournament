@@ -73,23 +73,26 @@ const ExportPage = () => {
       const roundRegistrations = registrations.filter((r) => r.round === roundKey);
       const deduplicatedRegistrations = deduplicateRegistrations(roundRegistrations);
       
-      dataToExport = deduplicatedRegistrations.map((r) => ({
-        PlayerAccountNumber: r.playerAccountNumber,
-        FirstName: r.firstName,
-        LastName: r.lastName,
-        EventName: r.eventName,
-        EventType: r.eventType,
-        PaymentType: r.paymentType,
-        PaymentAmount: r.paymentAmount,
-        PaymentType2: r.paymentType2,
-        PaymentAmount2: r.paymentAmount2,
-        RegistrationDate: r.registrationDate,
-        Host: r.host,
-        Comment: r.comment,
-        Employee: r.employee,
-        Round: r.round,
-        TimeSlot: r.timeSlot
-      }));
+      dataToExport = deduplicatedRegistrations.map((r) => {
+        console.log('Exporting registration:', r); // Debug log
+        return {
+          PlayerAccountNumber: r.playerAccountNumber,
+          FirstName: r.firstName,
+          LastName: r.lastName,
+          EntryType: r.entryType || 'PAY',
+          EventType: r.eventType || 'PAY', // Simple: PAY, COMP, or Mulligan
+          PaymentType: r.paymentType || '',
+          PaymentAmount: r.paymentAmount || 0,
+          PaymentType2: r.paymentType2 || '',
+          PaymentAmount2: r.paymentAmount2 || 0,
+          RegistrationDate: r.registrationDate,
+          Host: r.host || '',
+          Comment: r.comment || '',
+          Employee: r.employee,
+          Round: r.round,
+          TimeSlot: r.timeSlot
+        };
+      });
 
       filename = `${selectedEvent}_${roundKey}_Registrations_${new Date().toISOString().split('T')[0]}.csv`;
     } else {
@@ -98,16 +101,20 @@ const ExportPage = () => {
       if (roundKey === 'round1') {
         combinedData.push(...masterData.map((player) => {
           const normalizedPlayer = normalizePlayerData(player);
+          // FIXED: Master data entries should show their actual entry type
           return {
             PlayerAccountNumber: normalizedPlayer.playerAccountNumber,
             FirstName: normalizedPlayer.firstName,
             LastName: normalizedPlayer.lastName,
-            EventName: selectedEvent,
-            EventType: normalizedPlayer.entryType,
-            PaymentType: normalizedPlayer.entryType === 'COMP' ? 'Comp' : 'Cash',
-            PaymentAmount: normalizedPlayer.entryType === 'COMP' ? 0 : 500,
-            UploadedDate: new Date().toISOString(),
-            Host: normalizedPlayer.host,
+            EntryType: normalizedPlayer.entryType || 'PAY',
+            EventType: normalizedPlayer.entryType === 'COMP' ? 'COMP' : 'PAY', // Simple conversion
+            PaymentType: normalizedPlayer.entryType === 'COMP' ? 'Comp' : '',
+            PaymentAmount: normalizedPlayer.entryType === 'COMP' ? 0 : 0, // Master data doesn't have amounts
+            PaymentType2: '',
+            PaymentAmount2: 0,
+            RegistrationDate: '',
+            Host: normalizedPlayer.host || '',
+            Comment: '',
             Employee: employee,
             Round: null, 
             TimeSlot: null
@@ -119,27 +126,32 @@ const ExportPage = () => {
       const roundRegistrations = registrations.filter((r) => r.round === roundKey);
       const deduplicatedRegistrations = deduplicateRegistrations(roundRegistrations);
       
-      combinedData.push(...deduplicatedRegistrations.map((reg) => ({
-        PlayerAccountNumber: reg.playerAccountNumber,
-        FirstName: reg.firstName,
-        LastName: reg.lastName,
-        EventName: reg.eventName,
-        EventType: reg.eventType,
-        PaymentType: reg.paymentType,
-        PaymentAmount: reg.paymentAmount,
-        PaymentType2: reg.paymentType2,
-        PaymentAmount2: reg.paymentAmount2,
-        RegistrationDate: reg.registrationDate,
-        Host: reg.host,
-        Comment: reg.comment,
-        Employee: reg.employee,
-        Round: reg.round,
-        TimeSlot: reg.timeSlot
-      })));
+      combinedData.push(...deduplicatedRegistrations.map((reg) => {
+        console.log('Exporting combined registration:', reg); // Debug log
+        return {
+          PlayerAccountNumber: reg.playerAccountNumber,
+          FirstName: reg.firstName,
+          LastName: reg.lastName,
+          EntryType: reg.entryType || 'PAY',
+          EventType: reg.eventType || 'PAY', // Simple: PAY, COMP, or Mulligan
+          PaymentType: reg.paymentType || '',
+          PaymentAmount: reg.paymentAmount || 0,
+          PaymentType2: reg.paymentType2 || '',
+          PaymentAmount2: reg.paymentAmount2 || 0,
+          RegistrationDate: reg.registrationDate,
+          Host: reg.host || '',
+          Comment: reg.comment || '',
+          Employee: reg.employee,
+          Round: reg.round,
+          TimeSlot: reg.timeSlot
+        };
+      }));
 
       dataToExport = combinedData;
       filename = `${selectedEvent}_${roundKey}_Complete_${new Date().toISOString().split('T')[0]}.csv`;
     }
+
+    console.log('Final export data sample:', dataToExport[0]); // Debug log to verify EventType
 
     const csv = Papa.unparse(dataToExport);
     const blob = new Blob([csv], { type: 'text/csv' });

@@ -22,11 +22,17 @@ const getTimeSlotName = (round, slotNumber) => {
 
 const TablingManagement = () => {
   const navigate = useNavigate();
-  const { selectedEvent, tournaments, registrations, setRegistrations } = useTournamentContext();
+  const { 
+    selectedEvent, 
+    tournaments, 
+    registrations, 
+    setRegistrations,
+    globalDisabledTables,
+    setGlobalDisabledTables // Use from context instead of local state
+  } = useTournamentContext();
+  
   const [activeTab, setActiveTab] = useState('tabling');
   const [showPaymentBreakdown, setShowPaymentBreakdown] = useState(false);
-  
-  const [globalDisabledTables, setGlobalDisabledTables] = useState({});
 
   const getCurrentTournament = () => {
     if (!selectedEvent) {

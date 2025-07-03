@@ -44,6 +44,11 @@ const PaymentCard = ({
     return currentRoundInfo?.isRebuy ? currentTournament.rebuyCost : currentTournament.entryCost;
   };
 
+  // SIMPLIFIED: All payment types available, always show all options
+  const getAvailablePaymentTypes = () => {
+    return ['Cash', 'Credit', 'Chips', 'Comp'];
+  };
+
   return (
     <div className="card payment-card">
       <h4 style={{ margin: '0 0 16px 0', fontSize: '1.1rem' }}>{getPaymentTitle()}</h4>
@@ -58,7 +63,7 @@ const PaymentCard = ({
               className="select-field"
             >
               <option value="">-- Select Payment Type --</option>
-              {getPaymentTypes().map(type => (
+              {getAvailablePaymentTypes().map(type => (
                 <option key={type} value={type}>{type}</option>
               ))}
             </select>
@@ -103,7 +108,7 @@ const PaymentCard = ({
                 className="select-field"
               >
                 <option value="">-- Select Second Payment Type --</option>
-                {getPaymentTypes().filter(type => type !== 'Comp' && type !== paymentType).map(type => (
+                {getAvailablePaymentTypes().filter(type => type !== 'Comp' && type !== paymentType).map(type => (
                   <option key={type} value={type}>{type}</option>
                 ))}
               </select>
