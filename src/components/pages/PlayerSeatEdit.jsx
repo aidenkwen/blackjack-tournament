@@ -272,6 +272,7 @@ const PlayerSeatEdit = ({
     }
   };
 
+  // FIXED: Prevent closing modal if player needs reseating
   const handleCloseModal = () => {
     if (playerNeedsReseating && !selectedSeatInModal) {
       toast.error('Please select a new seat before closing. The player currently has no seat assigned.');
@@ -281,6 +282,23 @@ const PlayerSeatEdit = ({
     setSelectedSeatInModal(null);
     setPlayerNeedsReseating(false);
   };
+
+  // FIXED: Add escape key handler that respects the same rules
+  React.useEffect(() => {
+    const handleEscapeKey = (event) => {
+      if (event.key === 'Escape' && showSeatingModal) {
+        event.preventDefault();
+        handleCloseModal();
+      }
+    };
+
+    if (showSeatingModal) {
+      document.addEventListener('keydown', handleEscapeKey);
+      return () => {
+        document.removeEventListener('keydown', handleEscapeKey);
+      };
+    }
+  }, [showSeatingModal, playerNeedsReseating, selectedSeatInModal]);
 
   const EditableSeatingModal = () => {
     if (!showSeatingModal || !modalRound || !modalSelectedTimeSlot) return null;
@@ -293,8 +311,33 @@ const PlayerSeatEdit = ({
         <div style={{ backgroundColor: 'white', padding: '24px', borderRadius: '8px', width: '90%', maxWidth: '1000px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
             <h3 style={{ margin: 0 }} className="round-info">{roundName} - Edit Seating</h3>
-            <button onClick={handleCloseModal} className="btn-close">×</button>
+            {/* FIXED: Show different close button styling when disabled */}
+            <button 
+              onClick={handleCloseModal} 
+              className={`btn-close ${playerNeedsReseating && !selectedSeatInModal ? 'btn-close-disabled' : ''}`}
+              style={{
+                opacity: playerNeedsReseating && !selectedSeatInModal ? 0.5 : 1,
+                cursor: playerNeedsReseating && !selectedSeatInModal ? 'not-allowed' : 'pointer'
+              }}
+              title={playerNeedsReseating && !selectedSeatInModal ? 'Please select a seat before closing' : 'Close'}
+            >
+              ×
+            </button>
           </div>
+          
+          {/* FIXED: Show warning message when player needs reseating */}
+          {playerNeedsReseating && !selectedSeatInModal && (
+            <div style={{ 
+              marginBottom: '16px', 
+              padding: '12px', 
+              backgroundColor: '#fff3cd', 
+              border: '1px solid #ffeaa7', 
+              borderRadius: '4px',
+              color: '#856404'
+            }}>
+              <strong>⚠️ Action Required:</strong> {selectedPlayerInModal?.firstName} needs a new seat assignment. Please select a seat before closing this window.
+            </div>
+          )}
           
           {selectedPlayerInModal && (
             <div style={{ marginBottom: '16px', padding: '12px', backgroundColor: '#f5f5f5', border: '1px solid #ddd', borderRadius: '4px' }}>
@@ -326,6 +369,10 @@ const PlayerSeatEdit = ({
               {selectedSeatInModal ? (
                 <p style={{ margin: '8px 0 0 0', fontSize: '0.85rem', color: '#666' }}>
                   Selected: Table {selectedSeatInModal.table}, Seat {selectedSeatInModal.seat}. Click "Confirm Seat" to assign.
+                </p>
+              ) : playerNeedsReseating ? (
+                <p style={{ margin: '8px 0 0 0', fontSize: '0.85rem', color: '#d63384', fontWeight: '600' }}>
+                  ⚠️ Please select a new seat - this player currently has no seat assigned.
                 </p>
               ) : (
                 <p style={{ margin: '8px 0 0 0', fontSize: '0.85rem', color: '#666' }}>Click a seat to select it.</p>
