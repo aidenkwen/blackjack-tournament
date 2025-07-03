@@ -8,6 +8,7 @@ const PlayerSeatEdit = ({
   setRegistrations, 
   allRegistrations,
   globalDisabledTables,
+  setGlobalDisabledTables,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [playerRegistrations, setPlayerRegistrations] = useState([]);
@@ -51,6 +52,16 @@ const PlayerSeatEdit = ({
     if (round === 'semifinals' && tableNumber === 6) return true;
     const key = getDisabledKey(round, timeSlot, tableNumber);
     return globalDisabledTables[key] || false;
+  };
+
+  const toggleTable = (tableNumber, round, timeSlot) => {
+    const hasPlayers = [1, 2, 3, 4, 5, 6].some(seat => getPlayerAtSeat(tableNumber, seat, round, timeSlot));
+    if (hasPlayers) {
+      toast.error('Cannot disable a table with players currently seated.');
+      return;
+    }
+    const key = getDisabledKey(round, timeSlot, tableNumber);
+    setGlobalDisabledTables(prev => ({ ...prev, [key]: !prev[key] }));
   };
 
   const getFurthestRoundForPlayer = (playerAccountNumber) => {
@@ -139,8 +150,8 @@ const PlayerSeatEdit = ({
     setModalSelectedTimeSlot(timeSlot);
     setShowSeatingModal(true);
     setSelectedPlayerInModal(playerReg || null);
-    setPlayerNeedsReseating(false); // Reset reseating flag
-    setSelectedSeatInModal(null); // Reset selected seat
+    setPlayerNeedsReseating(false);
+    setSelectedSeatInModal(null);
   };
 
   const getPlayerAtSeat = (table, seat, round, timeSlot) => 
@@ -153,8 +164,6 @@ const PlayerSeatEdit = ({
 
   const handleSeatClickInModal = (tableNumber, seatNumber) => {
     if (isTableDisabled(tableNumber, modalRound, modalSelectedTimeSlot)) return;
-    
-    // Set the selected seat for confirmation
     setSelectedSeatInModal({ table: tableNumber, seat: seatNumber });
   };
 
@@ -163,8 +172,6 @@ const PlayerSeatEdit = ({
     
     const { table: newTable, seat: newSeat } = selectedSeatInModal;
     const playerAtTarget = getPlayerAtSeat(newTable, newSeat, modalRound, modalSelectedTimeSlot);
-    const currentPlayerId = selectedPlayerInModal.id;
-    const playerName = selectedPlayerInModal.firstName;
     const playerAccountNumber = selectedPlayerInModal.playerAccountNumber;
     const playerRound = selectedPlayerInModal.round;
     
@@ -172,55 +179,50 @@ const PlayerSeatEdit = ({
     const timeSlotName = getTimeSlotName(modalRound, modalSelectedTimeSlot);
     
     let confirmMessage = `Move ${selectedPlayerInModal.firstName} to Table ${newTable}, Seat ${newSeat} in ${roundName}, ${timeSlotName}?`;
-    if (playerAtTarget && playerAtTarget.id !== selectedPlayerInModal.id) {
+    if (playerAtTarget && playerAtTarget.playerAccountNumber !== selectedPlayerInModal.playerAccountNumber) {
       confirmMessage += `\n\nThis will remove ${playerAtTarget.firstName} ${playerAtTarget.lastName} from this seat.`;
     }
     
     const confirmed = window.confirm(confirmMessage);
     
     if (confirmed) {
-      const updatedRegistrations = allRegistrations.map(r => {
-        if (r.id === currentPlayerId) {
-          return { 
-            ...r, 
-            tableNumber: newTable, 
-            seatNumber: newSeat,
-            timeSlot: modalSelectedTimeSlot
-          };
-        }
-        if (r.id !== currentPlayerId && 
-            r.round === modalRound && 
-            r.timeSlot === modalSelectedTimeSlot && 
-            r.tableNumber === newTable && 
-            r.seatNumber === newSeat) {
-          return { ...r, tableNumber: null, seatNumber: null };
-        }
-        return r;
+      setRegistrations(prevRegistrations => {
+        return prevRegistrations.map(r => {
+          if (r.playerAccountNumber === playerAccountNumber && 
+              r.round === playerRound && 
+              !r.isMulligan) {
+            return { 
+              ...r, 
+              tableNumber: newTable, 
+              seatNumber: newSeat,
+              timeSlot: modalSelectedTimeSlot
+            };
+          }
+          if (r.round === modalRound && 
+              r.timeSlot === modalSelectedTimeSlot && 
+              r.tableNumber === newTable && 
+              r.seatNumber === newSeat &&
+              r.playerAccountNumber !== playerAccountNumber) {
+            return { ...r, tableNumber: null, seatNumber: null };
+          }
+          return r;
+        });
       });
       
-      // Update global registrations
-      setRegistrations(updatedRegistrations);
-      
-      // Update playerRegistrations immediately with the new data
-      // Find the updated registration by player account and round (more reliable than ID)
-      const updatedPlayerReg = updatedRegistrations.find(r => 
-        r.playerAccountNumber === playerAccountNumber && 
-        r.round === playerRound && 
-        !r.isMulligan
+      setPlayerRegistrations(prevRegs => 
+        prevRegs.map(reg => 
+          reg.playerAccountNumber === playerAccountNumber && reg.round === playerRound && !reg.isMulligan
+            ? { ...reg, tableNumber: newTable, seatNumber: newSeat, timeSlot: modalSelectedTimeSlot }
+            : reg
+        )
       );
       
-      if (updatedPlayerReg) {
-        console.log('Setting updated player reg:', updatedPlayerReg);
-        setPlayerRegistrations([updatedPlayerReg]);
-      }
-      
-      // Clear modal state
       setSelectedPlayerInModal(null);
       setPlayerNeedsReseating(false);
       setSelectedSeatInModal(null);
       setShowSeatingModal(false);
       
-      toast.success(`${playerName} moved successfully.`);
+      toast.success(`${selectedPlayerInModal.firstName} moved successfully.`);
     }
   };
 
@@ -229,7 +231,6 @@ const PlayerSeatEdit = ({
     
     const newTimeSlotInt = parseInt(newTimeSlot);
     
-    // If the time slot isn't actually changing, don't do anything
     if (newTimeSlotInt === modalTimeSlot) {
       return;
     }
@@ -242,30 +243,30 @@ const PlayerSeatEdit = ({
     );
     
     if (confirmed) {
-      const updatedRegistrations = allRegistrations.map(r => {
-        if (r.id === selectedPlayerInModal.id) {
-          return { 
-            ...r, 
-            timeSlot: newTimeSlotInt,
-            tableNumber: null, 
-            seatNumber: null 
-          };
-        }
-        return r;
+      setRegistrations(prevRegistrations => {
+        return prevRegistrations.map(r => {
+          if (r.playerAccountNumber === selectedPlayerInModal.playerAccountNumber && 
+              r.round === selectedPlayerInModal.round && 
+              !r.isMulligan) {
+            return { 
+              ...r, 
+              timeSlot: newTimeSlotInt,
+              tableNumber: null, 
+              seatNumber: null 
+            };
+          }
+          return r;
+        });
       });
       
-      setRegistrations(updatedRegistrations);
       setModalSelectedTimeSlot(newTimeSlotInt);
       setModalTimeSlot(newTimeSlotInt);
-      setPlayerNeedsReseating(true); // Set flag when player needs reseating
-      setSelectedSeatInModal(null); // Clear selected seat when time slot changes
+      setPlayerNeedsReseating(true);
+      setSelectedSeatInModal(null);
       
-      const updatedPlayer = updatedRegistrations.find(r => r.id === selectedPlayerInModal.id);
+      const updatedPlayer = { ...selectedPlayerInModal, timeSlot: newTimeSlotInt, tableNumber: null, seatNumber: null };
       setSelectedPlayerInModal(updatedPlayer);
-      
-      if (updatedPlayer) {
-        setPlayerRegistrations([updatedPlayer]);
-      }
+      setPlayerRegistrations([updatedPlayer]);
       
       toast.success(`${selectedPlayerInModal.firstName} moved to ${newTimeSlotName}.`);
     }
@@ -277,6 +278,8 @@ const PlayerSeatEdit = ({
       return;
     }
     setShowSeatingModal(false);
+    setSelectedSeatInModal(null);
+    setPlayerNeedsReseating(false);
   };
 
   const EditableSeatingModal = () => {
@@ -331,51 +334,107 @@ const PlayerSeatEdit = ({
           )}
           
           <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '16px', maxHeight: '70vh', overflowY: 'auto' }}>
-            {[1, 2, 3, 4, 5, 6].map(tableNumber => (
-              <div key={tableNumber}>
-                <h4 style={{marginTop: 0}}>Table {tableNumber}</h4>
-                {isTableDisabled(tableNumber, modalRound, modalSelectedTimeSlot) ? (
-                  <div style={{ height: '80px', boxSizing: 'border-box', borderRadius: '4px', backgroundColor: '#666666', border: '2px solid #ccc', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ffffff', fontSize: '0.9rem', fontWeight: 'bold' }}>Table Disabled</div>
-                ) : (
-                  <div style={{ display: 'flex', gap: '8px' }}>
-                    {[1, 2, 3, 4, 5, 6].map(seatNumber => {
-                      const player = getPlayerAtSeat(tableNumber, seatNumber, modalRound, modalSelectedTimeSlot);
-                      const isCurrentPlayer = selectedPlayerInModal && selectedPlayerInModal.id === player?.id;
-                      const isSelectedSeat = selectedSeatInModal && selectedSeatInModal.table === tableNumber && selectedSeatInModal.seat === seatNumber;
-                      
-                      let backgroundColor = '#ffffff';
-                      let textColor = '#000';
-                      let borderColor = '#ccc';
-                      
-                      if (isSelectedSeat) { 
-                        backgroundColor = '#8b0000'; 
-                        textColor = '#ffffff'; 
-                        borderColor = '#8b0000';
-                      } else if (isCurrentPlayer) {
-                        backgroundColor = '#8b0000'; 
-                        textColor = '#ffffff'; 
-                        borderColor = '#8b0000';
-                      } else if (player) { 
-                        backgroundColor = '#666666'; 
-                        textColor = '#ffffff'; 
-                        borderColor = '#ccc';
-                      }
-                      
-                      return (
-                        <div key={seatNumber} onClick={() => handleSeatClickInModal(tableNumber, seatNumber)} style={{ minHeight: '60px', minWidth: '80px', border: `2px solid ${borderColor}`, borderRadius: '4px', padding: '8px', backgroundColor, color: textColor, textAlign: 'center', cursor: 'pointer', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', fontSize: '0.8rem', flex: 1 }}>
-                          <div className="seat-label" style={{ color: textColor, fontWeight: 'bold', marginBottom: '2px' }}>Seat {seatNumber}</div>
-                          {player ? (
-                            <div className="player-name-compact" style={{ color: textColor }}>{player.firstName} {player.lastName}</div>
-                          ) : (
-                            <div style={{ color: textColor }}>Empty</div>
-                          )}
-                        </div>
-                      );
-                    })}
+            {[1, 2, 3, 4, 5, 6].map(tableNumber => {
+              const isDisabled = isTableDisabled(tableNumber, modalRound, modalSelectedTimeSlot);
+              const isPermanentlyDisabled = modalRound === 'semifinals' && tableNumber === 6;
+
+              return (
+                <div key={tableNumber}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                    <h4 style={{ margin: 0, fontSize: '1.1rem' }}>Table {tableNumber}</h4>
+                    {!isPermanentlyDisabled && (
+                      <div 
+                        style={{
+                          position: 'relative', 
+                          width: '50px', 
+                          height: '26px',
+                          backgroundColor: isDisabled ? '#ccc' : '#8b0000',
+                          borderRadius: '13px', 
+                          cursor: 'pointer',
+                          transition: 'background-color 0.2s ease'
+                        }} 
+                        onClick={() => toggleTable(tableNumber, modalRound, modalSelectedTimeSlot)}
+                        title={isDisabled ? 'Click to activate' : 'Click to disable'}
+                      >
+                        <div style={{
+                          position: 'absolute', 
+                          top: '2px', 
+                          left: '2px',
+                          width: '22px', 
+                          height: '22px', 
+                          backgroundColor: '#fff',
+                          borderRadius: '50%', 
+                          transition: 'transform 0.2s ease',
+                          transform: isDisabled ? 'translateX(0px)' : 'translateX(24px)',
+                        }} />
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
-            ))}
+                  {isDisabled ? (
+                    <div style={{ height: '80px', boxSizing: 'border-box', borderRadius: '4px', backgroundColor: '#666666', border: '2px solid #ccc', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ffffff', fontSize: '0.9rem', fontWeight: 'bold' }}>
+                      {isPermanentlyDisabled ? 'Table Disabled (Semifinals)' : 'Table Disabled'}
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      {[1, 2, 3, 4, 5, 6].map(seatNumber => {
+                        const player = getPlayerAtSeat(tableNumber, seatNumber, modalRound, modalSelectedTimeSlot);
+                        const isCurrentPlayer = selectedPlayerInModal && selectedPlayerInModal.playerAccountNumber === player?.playerAccountNumber;
+                        const isSelectedSeat = selectedSeatInModal && selectedSeatInModal.table === tableNumber && selectedSeatInModal.seat === seatNumber;
+                        
+                        let backgroundColor = '#ffffff';
+                        let textColor = '#000';
+                        let borderColor = '#ccc';
+                        
+                        if (isSelectedSeat) { 
+                          backgroundColor = '#8b0000'; 
+                          textColor = '#ffffff'; 
+                          borderColor = '#8b0000';
+                        } else if (isCurrentPlayer) {
+                          backgroundColor = '#8b0000'; 
+                          textColor = '#ffffff'; 
+                          borderColor = '#8b0000';
+                        } else if (player) { 
+                          backgroundColor = '#666666'; 
+                          textColor = '#ffffff'; 
+                          borderColor = '#ccc';
+                        }
+                        
+                        return (
+                          <div 
+                            key={seatNumber} 
+                            onClick={() => handleSeatClickInModal(tableNumber, seatNumber)} 
+                            style={{ 
+                              minHeight: '60px', 
+                              minWidth: '80px', 
+                              border: `2px solid ${borderColor}`, 
+                              borderRadius: '4px', 
+                              padding: '8px', 
+                              backgroundColor, 
+                              color: textColor, 
+                              textAlign: 'center', 
+                              cursor: 'pointer', 
+                              display: 'flex', 
+                              flexDirection: 'column', 
+                              justifyContent: 'center', 
+                              alignItems: 'center', 
+                              fontSize: '0.8rem', 
+                              flex: 1 
+                            }}
+                          >
+                            <div className="seat-label" style={{ color: textColor, fontWeight: 'bold', marginBottom: '2px' }}>Seat {seatNumber}</div>
+                            {player ? (
+                              <div className="player-name-compact" style={{ color: textColor }}>{player.firstName} {player.lastName}</div>
+                            ) : (
+                              <div style={{ color: textColor }}>Empty</div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
       </div>

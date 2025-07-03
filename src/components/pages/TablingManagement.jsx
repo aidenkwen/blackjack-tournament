@@ -42,9 +42,8 @@ const TablingManagement = () => {
   const currentTournament = getCurrentTournament();
   const tournamentRegistrations = registrations;
 
-  // NEW: Navigate back to registration preserving search state
+  // Navigate back to registration preserving search state
   const handleBackToRegistration = () => {
-    // Don't clear any search state - just navigate back
     navigate('/register');
   };
 
@@ -54,11 +53,11 @@ const TablingManagement = () => {
     const rebuyTotals = { 'Cash': 0, 'Credit': 0, 'Chips': 0 };
     const mulliganTotals = { 'Cash': 0, 'Credit': 0, 'Chips': 0 };
 
-    // FIXED: Track processed registrations to avoid double counting updates
+    // Track processed registrations to avoid double counting updates
     const processedRegistrations = new Set();
 
     tournamentRegistrations.forEach(reg => {
-      // FIXED: Skip if we've already processed a registration for this player/round combination
+      // Skip if we've already processed a registration for this player/round combination
       const registrationKey = `${reg.playerAccountNumber}-${reg.round}-${reg.isMulligan}`;
       if (processedRegistrations.has(registrationKey)) {
         return; // Skip duplicate/updated registration
@@ -111,7 +110,6 @@ const TablingManagement = () => {
 
   return (
     <div className="container">
-      {/* NEW: Use the state-preserving navigation function */}
       <button onClick={handleBackToRegistration} className="link-back link-back-block">
         {'<'} Back to Registration
       </button>
