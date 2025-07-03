@@ -105,6 +105,19 @@ export const useRegistration = ({
     [allRegistrations, selectedEvent]
   );
   
+  // FIXED: Simplified eventType determination
+  const determineEventType = useCallback((paymentType, playerEntryType, currentRound) => {
+    if (paymentType === 'Comp') {
+      return 'COMP';
+    } else if (paymentType === 'Cash' || paymentType === 'Credit' || paymentType === 'Chips') {
+      return 'PAY';
+    } else if (currentRound === 'round1' && playerEntryType === 'COMP' && !paymentType) {
+      return 'COMP';
+    } else {
+      return 'PAY';
+    }
+  }, []);
+  
   // FIXED: Use useCallback for payment type change
   const handlePaymentTypeChange = useCallback((newType) => {
     const oldType = paymentType;
@@ -293,12 +306,9 @@ export const useRegistration = ({
       let updatedRegistrations = [...prevRegistrations];
       
       // SIMPLIFIED: Create the registration with simple eventType logic
-      let eventType = 'PAY'; // Default to PAY
-      if (regData.paymentType === 'Comp') {
-        eventType = 'COMP';
-      } else if (activeTab === 'registration' && player.entryType === 'COMP' && !regData.paymentType) {
-        eventType = 'COMP';
-      }
+      const eventType = determineEventType(regData.paymentType, player.entryType, roundKey);
+      const finalPaymentType = eventType === 'COMP' ? 'Comp' : regData.paymentType;
+      const finalPaymentAmount = eventType === 'COMP' ? 0 : normalizePaymentAmount(regData.paymentAmount);
       
       const baseReg = {
         id: crypto.randomUUID(), 
@@ -306,10 +316,10 @@ export const useRegistration = ({
         firstName: player.firstName, 
         lastName: player.lastName,
         eventName: selectedEvent, 
-        eventType, // SIMPLIFIED: PAY or COMP
+        eventType, // Simple: PAY, COMP
         entryType: player.entryType, // Original EntryType from import
-        paymentType: regData.paymentType || (eventType === 'COMP' ? 'Comp' : null), 
-        paymentAmount: normalizePaymentAmount(regData.paymentAmount),
+        paymentType: finalPaymentType, 
+        paymentAmount: finalPaymentAmount,
         paymentType2: regData.splitPayment ? regData.paymentType2 : null, 
         paymentAmount2: regData.splitPayment ? normalizePaymentAmount(regData.paymentAmount2) : null,
         registrationDate: new Date().toISOString(), 
@@ -333,7 +343,7 @@ export const useRegistration = ({
           firstName: player.firstName, 
           lastName: player.lastName,
           eventName: selectedEvent, 
-          eventType: 'Mulligan', // SIMPLIFIED: Always "Mulligan"
+          eventType: 'Mulligan', // Always "Mulligan"
           entryType: player.entryType, // Original EntryType from import
           paymentType: regData.mulliganPaymentType, 
           paymentAmount: normalizePaymentAmount(regData.mulliganAmount),
@@ -400,14 +410,14 @@ export const useRegistration = ({
     // Success message for new player registration - always needs seating since it's initial registration
     let successMessage = '';
     if (isRebuyRound) {
-      successMessage = `${player.firstName} checked in for ${currentRoundInfo.name}!`;
+      successMessage = `${player.firstName} registered for ${currentRoundInfo.name}!`;
     } else {
       successMessage = `${player.firstName} registered for ${currentRoundInfo.name}!`;
     }
     
     toast.success(successMessage);
     setCurrentPage(2); // New players always go to seating
-  }, [activeTab, selectedRound, rounds, selectedTimeSlot, initialTournament.rebuyCost, initialTournament.mulliganCost, selectedEvent, employee, setRegistrations, setPendingRegistration, setLastRegisteredPlayer, setCurrentPage]);
+  }, [activeTab, selectedRound, rounds, selectedTimeSlot, initialTournament.rebuyCost, initialTournament.mulliganCost, selectedEvent, employee, setRegistrations, setPendingRegistration, setLastRegisteredPlayer, setCurrentPage, determineEventType]);
   
   const handleRegistration = useCallback(() => {
     if (!currentPlayer) return;
@@ -439,7 +449,7 @@ export const useRegistration = ({
     const isTimeSlotChange = existingReg && existingReg.timeSlot !== currentTimeSlot;
 
     if (activeTab === 'post-registration' && existingRegIndex === -1 && !addMulligan && !isRebuyRound) {
-      toast.error(`Player is not in ${currentRoundInfo.name}. Please add a mulligan or perform a rebuy to check them in.`);
+      toast.error(`Player is not in ${currentRoundInfo.name}. Please add a mulligan or perform a rebuy to register them.`);
       return;
     }
 
@@ -486,21 +496,35 @@ export const useRegistration = ({
                 r.round === roundKey && 
                 !r.isMulligan) {
               
-              // SIMPLIFIED: EventType based on payment
-              const newEventType = paymentType === 'Comp' ? 'COMP' : 'PAY';
+              // FIXED: When updating time slot, preserve existing payment details unless explicitly changing them
+              const isPaymentChange = paymentType && paymentType !== r.paymentType;
+              
+              let newEventType, finalPaymentType, finalPaymentAmount;
+              
+              if (isPaymentChange) {
+                // User is explicitly changing payment type, use new values
+                newEventType = determineEventType(paymentType, normalizedPlayer.entryType, roundKey);
+                finalPaymentType = newEventType === 'COMP' ? 'Comp' : paymentType;
+                finalPaymentAmount = newEventType === 'COMP' ? 0 : normalizePaymentAmount(paymentAmount);
+              } else {
+                // Preserve existing payment details when just changing time slot or adding mulligan
+                newEventType = r.eventType;
+                finalPaymentType = r.paymentType;
+                finalPaymentAmount = r.paymentAmount;
+              }
               
               return {
                 ...r,
-                eventType: newEventType, // SIMPLIFIED: PAY or COMP
+                eventType: newEventType, // Simple: PAY, COMP
                 entryType: normalizedPlayer.entryType, // Preserve original EntryType
                 timeSlot: currentTimeSlot,
                 tableNumber: null, // Clear seating when changing time slot
                 seatNumber: null,
-                // Update payment info if provided
-                paymentType: paymentType || r.paymentType,
-                paymentAmount: paymentAmount ? normalizePaymentAmount(paymentAmount) : r.paymentAmount,
-                paymentType2: splitPayment ? paymentType2 : null,
-                paymentAmount2: splitPayment ? normalizePaymentAmount(paymentAmount2) : null,
+                // Update payment info only if explicitly changing
+                paymentType: finalPaymentType,
+                paymentAmount: finalPaymentAmount,
+                paymentType2: isPaymentChange && splitPayment ? paymentType2 : r.paymentType2,
+                paymentAmount2: isPaymentChange && splitPayment ? normalizePaymentAmount(paymentAmount2) : r.paymentAmount2,
                 host: host || r.host,
                 comment: comments || r.comment,
                 registrationDate: new Date().toISOString() // Update timestamp
@@ -517,17 +541,32 @@ export const useRegistration = ({
                 r.round === roundKey && 
                 !r.isMulligan) {
               
-              // SIMPLIFIED: EventType based on payment
-              const newEventType = paymentType === 'Comp' ? 'COMP' : 'PAY';
+              // FIXED: When updating, preserve existing payment details unless explicitly changing them
+              // Don't overwrite COMP player payment amounts when just adding/removing mulligans
+              const isPaymentChange = paymentType && paymentType !== r.paymentType;
+              
+              let newEventType, finalPaymentType, finalPaymentAmount;
+              
+              if (isPaymentChange) {
+                // User is explicitly changing payment type, use new values
+                newEventType = determineEventType(paymentType, normalizedPlayer.entryType, roundKey);
+                finalPaymentType = newEventType === 'COMP' ? 'Comp' : paymentType;
+                finalPaymentAmount = newEventType === 'COMP' ? 0 : normalizePaymentAmount(paymentAmount);
+              } else {
+                // Preserve existing payment details (just adding/removing mulligan)
+                newEventType = r.eventType;
+                finalPaymentType = r.paymentType;
+                finalPaymentAmount = r.paymentAmount;
+              }
               
               return {
                 ...r,
-                eventType: newEventType, // SIMPLIFIED: PAY or COMP
+                eventType: newEventType, // Simple: PAY, COMP
                 entryType: normalizedPlayer.entryType, // Preserve original EntryType
-                paymentType: paymentType || r.paymentType,
-                paymentAmount: paymentAmount ? normalizePaymentAmount(paymentAmount) : r.paymentAmount,
-                paymentType2: splitPayment ? paymentType2 : null,
-                paymentAmount2: splitPayment ? normalizePaymentAmount(paymentAmount2) : null,
+                paymentType: finalPaymentType,
+                paymentAmount: finalPaymentAmount,
+                paymentType2: isPaymentChange && splitPayment ? paymentType2 : r.paymentType2,
+                paymentAmount2: isPaymentChange && splitPayment ? normalizePaymentAmount(paymentAmount2) : r.paymentAmount2,
                 host: host || r.host,
                 comment: comments || r.comment,
                 registrationDate: new Date().toISOString()
@@ -542,12 +581,9 @@ export const useRegistration = ({
       // Add new registration (first time only)
       if (isFirstTimeRegistration) {
         // SIMPLIFIED: EventType logic
-        let eventType = 'PAY'; // Default to PAY
-        if (paymentType === 'Comp') {
-          eventType = 'COMP';
-        } else if (activeTab === 'registration' && normalizedPlayer.entryType === 'COMP' && !paymentType) {
-          eventType = 'COMP';
-        }
+        const eventType = determineEventType(paymentType, normalizedPlayer.entryType, roundKey);
+        const finalPaymentType = eventType === 'COMP' ? 'Comp' : paymentType;
+        const finalPaymentAmount = eventType === 'COMP' ? 0 : normalizePaymentAmount(paymentAmount);
         
         const baseReg = {
           id: crypto.randomUUID(), 
@@ -555,10 +591,10 @@ export const useRegistration = ({
           firstName: normalizedPlayer.firstName, 
           lastName: normalizedPlayer.lastName,
           eventName: selectedEvent, 
-          eventType, // SIMPLIFIED: PAY or COMP
+          eventType, // Simple: PAY, COMP
           entryType: normalizedPlayer.entryType, // Original EntryType from import
-          paymentType: paymentType || (eventType === 'COMP' ? 'Comp' : null), 
-          paymentAmount: normalizePaymentAmount(paymentAmount),
+          paymentType: finalPaymentType, 
+          paymentAmount: finalPaymentAmount,
           paymentType2: splitPayment ? paymentType2 : null, 
           paymentAmount2: splitPayment ? normalizePaymentAmount(paymentAmount2) : null,
           registrationDate: new Date().toISOString(), 
@@ -585,7 +621,7 @@ export const useRegistration = ({
           firstName: normalizedPlayer.firstName, 
           lastName: normalizedPlayer.lastName,
           eventName: selectedEvent, 
-          eventType: 'Mulligan', // SIMPLIFIED: Always "Mulligan"
+          eventType: 'Mulligan', // Always "Mulligan"
           entryType: normalizedPlayer.entryType, // Original EntryType from import
           paymentType: mulliganPaymentType, 
           paymentAmount: normalizePaymentAmount(mulliganAmount),
@@ -670,7 +706,7 @@ export const useRegistration = ({
     
     if (isFirstTimeRegistration) {
       if (isRebuyRound) {
-        successMessage = `${normalizedPlayer.firstName} checked in for ${currentRoundInfo.name}!`;
+        successMessage = `${normalizedPlayer.firstName} registered for ${currentRoundInfo.name}!`;
       } else {
         successMessage = `${normalizedPlayer.firstName} registered for ${currentRoundInfo.name}!`;
       }
@@ -699,7 +735,7 @@ export const useRegistration = ({
     mulliganPaymentType, mulliganAmount, splitMulliganPayment, mulliganPaymentType2,
     mulliganAmount2, comments, host, initialTournament.rebuyCost, initialTournament.mulliganCost,
     selectedEvent, employee, setRegistrations, setPendingRegistration, setLastRegisteredPlayer,
-    setCurrentPage, clearForm
+    setCurrentPage, clearForm, determineEventType
   ]);
   
   return {

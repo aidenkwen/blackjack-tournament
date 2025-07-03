@@ -99,27 +99,40 @@ const ExportPage = () => {
       const combinedData = [];
       
       if (roundKey === 'round1') {
-        combinedData.push(...masterData.map((player) => {
-          const normalizedPlayer = normalizePlayerData(player);
-          // FIXED: Master data entries should show their actual entry type
-          return {
-            PlayerAccountNumber: normalizedPlayer.playerAccountNumber,
-            FirstName: normalizedPlayer.firstName,
-            LastName: normalizedPlayer.lastName,
-            EntryType: normalizedPlayer.entryType || 'PAY',
-            EventType: normalizedPlayer.entryType === 'COMP' ? 'COMP' : 'PAY', // Simple conversion
-            PaymentType: normalizedPlayer.entryType === 'COMP' ? 'Comp' : '',
-            PaymentAmount: normalizedPlayer.entryType === 'COMP' ? 0 : 0, // Master data doesn't have amounts
-            PaymentType2: '',
-            PaymentAmount2: 0,
-            RegistrationDate: '',
-            Host: normalizedPlayer.host || '',
-            Comment: '',
-            Employee: employee,
-            Round: null, 
-            TimeSlot: null
-          };
-        }));
+        // Only include master data players who DON'T have actual registrations
+        const playersWithRegistrations = new Set(
+          registrations
+            .filter(r => r.round === roundKey && !r.isMulligan)
+            .map(r => r.playerAccountNumber)
+        );
+        
+        combinedData.push(...masterData
+          .filter(player => {
+            const normalizedPlayer = normalizePlayerData(player);
+            return !playersWithRegistrations.has(normalizedPlayer.playerAccountNumber);
+          })
+          .map((player) => {
+            const normalizedPlayer = normalizePlayerData(player);
+            // FIXED: Master data entries should show their actual entry type
+            return {
+              PlayerAccountNumber: normalizedPlayer.playerAccountNumber,
+              FirstName: normalizedPlayer.firstName,
+              LastName: normalizedPlayer.lastName,
+              EntryType: normalizedPlayer.entryType || 'PAY',
+              EventType: normalizedPlayer.entryType === 'COMP' ? 'COMP' : 'PAY', // Simple conversion
+              PaymentType: normalizedPlayer.entryType === 'COMP' ? 'Comp' : '',
+              PaymentAmount: 0, // Master data never has payment amounts
+              PaymentType2: '',
+              PaymentAmount2: 0,
+              RegistrationDate: '',
+              Host: normalizedPlayer.host || '',
+              Comment: '',
+              Employee: employee,
+              Round: null, 
+              TimeSlot: null
+            };
+          })
+        );
       }
 
       // Deduplicate registrations before adding to combined data

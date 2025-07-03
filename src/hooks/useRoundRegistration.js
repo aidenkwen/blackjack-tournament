@@ -194,21 +194,35 @@ export const useRoundRegistration = ({
               r.round === currentRound && 
               !r.isMulligan) {
             
-            // FIXED: Simple eventType based only on how they paid
-            const newEventType = determineEventType(paymentType, normalizedPlayer.entryType, currentRound);
-            const finalPaymentType = newEventType === 'COMP' ? 'Comp' : paymentType;
+            // FIXED: When updating, preserve existing payment details unless explicitly changing them
+            // Don't overwrite COMP player payment amounts when just adding/removing mulligans
+            const isPaymentChange = paymentType && paymentType !== r.paymentType;
+            
+            let newEventType, finalPaymentType, finalPaymentAmount;
+            
+            if (isPaymentChange) {
+              // User is explicitly changing payment type, use new values
+              newEventType = determineEventType(paymentType, normalizedPlayer.entryType, currentRound);
+              finalPaymentType = newEventType === 'COMP' ? 'Comp' : paymentType;
+              finalPaymentAmount = newEventType === 'COMP' ? 0 : normalizePaymentAmount(paymentAmount);
+            } else {
+              // Preserve existing payment details (just adding/removing mulligan or changing time slot)
+              newEventType = r.eventType;
+              finalPaymentType = r.paymentType;
+              finalPaymentAmount = r.paymentAmount;
+            }
 
             return {
               ...r,
-              eventType: newEventType, // Simple: PAY, COMP
-              entryType: normalizedPlayer.entryType, // Preserve original EntryType
+              eventType: newEventType,
+              entryType: normalizedPlayer.entryType,
               paymentType: finalPaymentType,
-              paymentAmount: normalizePaymentAmount(paymentAmount),
-              paymentType2: splitPayment ? paymentType2 : null,
-              paymentAmount2: splitPayment ? normalizePaymentAmount(paymentAmount2) : null,
+              paymentAmount: finalPaymentAmount,
+              paymentType2: isPaymentChange && splitPayment ? paymentType2 : r.paymentType2,
+              paymentAmount2: isPaymentChange && splitPayment ? normalizePaymentAmount(paymentAmount2) : r.paymentAmount2,
               registrationDate: new Date().toISOString(),
-              host,
-              comment: comments,
+              host: host || r.host,
+              comment: comments || r.comment,
               timeSlot: currentTimeSlot,
               tableNumber: isTimeSlotChange ? null : r.tableNumber,
               seatNumber: isTimeSlotChange ? null : r.seatNumber
@@ -225,6 +239,7 @@ export const useRoundRegistration = ({
         // FIXED: Simple eventType logic
         const eventType = determineEventType(paymentType, normalizedPlayer.entryType, currentRound);
         const finalPaymentType = eventType === 'COMP' ? 'Comp' : paymentType;
+        const finalPaymentAmount = eventType === 'COMP' ? 0 : normalizePaymentAmount(paymentAmount);
 
         const newReg = {
           id: crypto.randomUUID(),
@@ -235,7 +250,7 @@ export const useRoundRegistration = ({
           eventType: eventType, // Simple: PAY, COMP
           entryType: normalizedPlayer.entryType, // Original EntryType from import
           paymentType: finalPaymentType,
-          paymentAmount: normalizePaymentAmount(paymentAmount),
+                        paymentAmount: finalPaymentAmount,
           paymentType2: splitPayment ? paymentType2 : null,
           paymentAmount2: splitPayment ? normalizePaymentAmount(paymentAmount2) : null,
           registrationDate: new Date().toISOString(),
@@ -414,13 +429,15 @@ export const useRoundRegistration = ({
     if (player) {
       const normalizedPlayer = normalizePlayerData(player);
       
-      // Validate player eligibility for this round
+      // FIXED: Enforce Round 1 registration requirement for ALL rounds except Round 1
       if (currentRound !== 'round1' && !isRegisteredForRound(normalizedPlayer.playerAccountNumber, 'round1')) {
-        toast.error(`${normalizedPlayer.firstName} must be registered in Round 1 first.`);
+        toast.error(`${normalizedPlayer.firstName} must be registered in Round 1 before registering for ${currentRoundInfo.name}.`);
         return;
       }
+      
+      // FIXED: Additional specific validation for rebuy rounds
       if (currentRound === 'rebuy2' && !isRegisteredForRound(normalizedPlayer.playerAccountNumber, 'rebuy1')) {
-        toast.error(`${normalizedPlayer.firstName} must be in Rebuy 1 to be eligible for Rebuy 2.`);
+        toast.error(`${normalizedPlayer.firstName} must be registered in Rebuy 1 before registering for Rebuy 2.`);
         return;
       }
 
