@@ -288,7 +288,14 @@ const PlayerSeatEdit = ({
     const handleEscapeKey = (event) => {
       if (event.key === 'Escape' && showSeatingModal) {
         event.preventDefault();
-        handleCloseModal();
+        // Inline the close logic to avoid dependency issues
+        if (playerNeedsReseating && !selectedSeatInModal) {
+          toast.error('Please select a new seat before closing. The player currently has no seat assigned.');
+          return;
+        }
+        setShowSeatingModal(false);
+        setSelectedSeatInModal(null);
+        setPlayerNeedsReseating(false);
       }
     };
 
@@ -298,7 +305,7 @@ const PlayerSeatEdit = ({
         document.removeEventListener('keydown', handleEscapeKey);
       };
     }
-  }, [showSeatingModal, playerNeedsReseating, selectedSeatInModal, handleCloseModal]);
+  }, [showSeatingModal, playerNeedsReseating, selectedSeatInModal]);
 
   const EditableSeatingModal = () => {
     if (!showSeatingModal || !modalRound || !modalSelectedTimeSlot) return null;
