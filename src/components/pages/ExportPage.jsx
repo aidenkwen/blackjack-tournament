@@ -19,6 +19,22 @@ const ExportPage = () => {
     { key: 'quarterfinals', name: 'Quarterfinals' },
     { key: 'semifinals', name: 'Semifinals' }
   ];
+
+  // FIXED: Add time slot utility function for export
+  const getTimeSlotName = (round, slotNumber) => {
+    const timeSlotNames = {
+      'round1': ['9:00 AM', '9:45 AM', '10:30 AM', '11:15 AM', '12:00 PM', '12:45 PM'],
+      'rebuy1': ['1:30 PM', '2:15 PM'],
+      'rebuy2': ['3:00 PM'],
+      'round2': ['9:00 AM', '9:45 AM', '10:30 AM'],
+      'superrebuy': ['11:15 AM', '12:00 PM'],
+      'quarterfinals': ['12:45 PM', '1:30 PM'],
+      'semifinals': ['2:30 PM']
+    };
+    
+    const slots = timeSlotNames[round] || [];
+    return slots[slotNumber - 1] || `Slot ${slotNumber}`;
+  };
   
   const handleBackToRegistration = () => {
     navigate('/register');
@@ -90,7 +106,7 @@ const ExportPage = () => {
           Comment: r.comment || '',
           Employee: r.employee,
           Round: r.round,
-          TimeSlot: r.timeSlot
+          TimeSlot: r.timeSlot ? getTimeSlotName(r.round, r.timeSlot) : '' // FIXED: Convert to time slot name
         };
       });
 
@@ -129,7 +145,7 @@ const ExportPage = () => {
               Comment: '',
               Employee: employee,
               Round: null, 
-              TimeSlot: null
+              TimeSlot: '' // FIXED: Empty string for master data (no time slot)
             };
           })
         );
@@ -156,7 +172,7 @@ const ExportPage = () => {
           Comment: reg.comment || '',
           Employee: reg.employee,
           Round: reg.round,
-          TimeSlot: reg.timeSlot
+          TimeSlot: reg.timeSlot ? getTimeSlotName(reg.round, reg.timeSlot) : '' // FIXED: Convert to time slot name
         };
       }));
 

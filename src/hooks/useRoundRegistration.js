@@ -144,8 +144,9 @@ export const useRoundRegistration = ({
     const isFirstTimeRegistration = existingRegIndex === -1;
     const isUpdate = !isFirstTimeRegistration;
     
-    // FIXED: Simplified validation - just check if payment is required and valid
-    const needsPayment = !(currentRound === 'round1' && normalizedPlayer.entryType === 'COMP' && !paymentType);
+    // FIXED: Check if payment is required based on round type
+    const isPaymentRound = ['round1', 'rebuy1', 'rebuy2', 'superrebuy'].includes(currentRound);
+    const needsPayment = isPaymentRound && !(currentRound === 'round1' && normalizedPlayer.entryType === 'COMP' && !paymentType);
     
     if (needsPayment && !paymentType) {
       toast.error(`Please select payment type for ${currentRoundInfo.name}.`);
@@ -194,7 +195,7 @@ export const useRoundRegistration = ({
               r.round === currentRound && 
               !r.isMulligan) {
             
-            // FIXED: When updating, preserve existing payment details unless explicitly changing them
+            // When updating, preserve existing payment details unless explicitly changing them
             // Don't overwrite COMP player payment amounts when just adding/removing mulligans
             const isPaymentChange = paymentType && paymentType !== r.paymentType;
             
@@ -236,10 +237,19 @@ export const useRoundRegistration = ({
       } else {
         // Create new registration
         
-        // FIXED: Simple eventType logic
-        const eventType = determineEventType(paymentType, normalizedPlayer.entryType, currentRound);
-        const finalPaymentType = eventType === 'COMP' ? 'Comp' : paymentType;
-        const finalPaymentAmount = eventType === 'COMP' ? 0 : normalizePaymentAmount(paymentAmount);
+        // Simple eventType logic for non-payment rounds
+        let eventType, finalPaymentType, finalPaymentAmount;
+        
+        if (isPaymentRound) {
+          eventType = determineEventType(paymentType, normalizedPlayer.entryType, currentRound);
+          finalPaymentType = eventType === 'COMP' ? 'Comp' : paymentType;
+          finalPaymentAmount = eventType === 'COMP' ? 0 : normalizePaymentAmount(paymentAmount);
+        } else {
+          // For non-payment rounds (Round 2, Quarters, Semis), just mark as PAY with no payment
+          eventType = 'PAY';
+          finalPaymentType = null;
+          finalPaymentAmount = 0;
+        }
 
         const newReg = {
           id: crypto.randomUUID(),
@@ -250,7 +260,7 @@ export const useRoundRegistration = ({
           eventType: eventType, // Simple: PAY, COMP
           entryType: normalizedPlayer.entryType, // Original EntryType from import
           paymentType: finalPaymentType,
-                        paymentAmount: finalPaymentAmount,
+          paymentAmount: finalPaymentAmount,
           paymentType2: splitPayment ? paymentType2 : null,
           paymentAmount2: splitPayment ? normalizePaymentAmount(paymentAmount2) : null,
           registrationDate: new Date().toISOString(),
@@ -382,7 +392,7 @@ export const useRoundRegistration = ({
       });
     }
 
-    // FIXED: Better success messages that don't mention "check-in"
+    // Better success messages that don't mention "check-in"
     let successMessage = '';
     if (isFirstTimeRegistration) {
       successMessage = `${normalizedPlayer.firstName} registered for ${currentRoundInfo.name}!`;
@@ -465,15 +475,24 @@ export const useRoundRegistration = ({
         setHost(existingReg.host || '');
         setComments(existingReg.comment || '');
       } else {
-        // New registration - set defaults based on EntryType
+        // New registration - set defaults based on round and EntryType
         setSelectedTimeSlot('');
-        if (currentRound === 'round1' && normalizedPlayer.entryType === 'COMP') {
-          // COMP players get Comp pre-selected but can change it
-          setPaymentType('Comp');
-          setPaymentAmount('0');
+        
+        // Only set payment defaults for payment rounds
+        const isPaymentRound = ['round1', 'rebuy1', 'rebuy2', 'superrebuy'].includes(currentRound);
+        if (isPaymentRound) {
+          if (currentRound === 'round1' && normalizedPlayer.entryType === 'COMP') {
+            // COMP players get Comp pre-selected but can change it
+            setPaymentType('Comp');
+            setPaymentAmount('0');
+          } else {
+            setPaymentType('');
+            setPaymentAmount(currentRoundInfo.cost.toString());
+          }
         } else {
+          // For non-payment rounds, clear payment fields
           setPaymentType('');
-          setPaymentAmount(currentRoundInfo.cost.toString());
+          setPaymentAmount('');
         }
       }
 
@@ -516,37 +535,160 @@ export const useRoundRegistration = ({
       return;
     }
 
+    // Add player to master data
     const updatedMasterData = [...masterData, newPlayer];
     setMasterData(updatedMasterData);
+    
+    // Show first toast
     toast.success(`${newPlayer.firstName} added to the master player list.`);
 
     if (registerImmediately) {
       const normalizedPlayer = normalizePlayerData(newPlayer);
-      setCurrentPlayer(normalizedPlayer);
-      setShowNewPlayerForm(false);
       
       // Set form data from registration
-      setSelectedTimeSlot(() => registrationData.selectedTimeSlot);
-      setPaymentType(() => registrationData.paymentType);
-      setPaymentAmount(() => registrationData.paymentAmount);
-      setSplitPayment(() => registrationData.splitPayment);
-      setPaymentType2(() => registrationData.paymentType2);
-      setPaymentAmount2(() => registrationData.paymentAmount2);
-      setAddMulligan(() => registrationData.addMulligan);
-      setMulliganPaymentType(() => registrationData.mulliganPaymentType);
-      setMulliganAmount(() => registrationData.mulliganAmount);
-      setSplitMulliganPayment(() => registrationData.splitMulliganPayment);
-      setMulliganPaymentType2(() => registrationData.mulliganPaymentType2);
-      setMulliganAmount2(() => registrationData.mulliganAmount2);
-      setComments(() => registrationData.comments);
-      setHost(() => registrationData.host);
+      setCurrentPlayer(normalizedPlayer);
+      setShowNewPlayerForm(false);
+      setSelectedTimeSlot(registrationData.selectedTimeSlot.toString());
+      setPaymentType(registrationData.paymentType);
+      setPaymentAmount(registrationData.paymentAmount);
+      setSplitPayment(registrationData.splitPayment);
+      setPaymentType2(registrationData.paymentType2);
+      setPaymentAmount2(registrationData.paymentAmount2);
+      setAddMulligan(registrationData.addMulligan);
+      setMulliganPaymentType(registrationData.mulliganPaymentType);
+      setMulliganAmount(registrationData.mulliganAmount);
+      setSplitMulliganPayment(registrationData.splitMulliganPayment);
+      setMulliganPaymentType2(registrationData.mulliganPaymentType2);
+      setMulliganAmount2(registrationData.mulliganAmount2);
+      setComments(registrationData.comments);
+      setHost(registrationData.host);
 
-      // Process registration immediately
-      setTimeout(() => handleRegistration(), 100);
+      // Process registration immediately without going through the normal handleRegistration flow
+      // This bypasses the UI validation since we already validated in NewPlayerForm
+      const currentTimeSlot = normalizePaymentAmount(registrationData.selectedTimeSlot);
+      
+      // Create registration records directly
+      setRegistrations(prevRegistrations => {
+        let updatedRegistrations = [...prevRegistrations];
+        
+        // Determine event type for main registration
+        const isPaymentRound = ['round1', 'rebuy1', 'rebuy2', 'superrebuy'].includes(currentRound);
+        let eventType, finalPaymentType, finalPaymentAmount;
+        
+        if (isPaymentRound) {
+          eventType = determineEventType(registrationData.paymentType, normalizedPlayer.entryType, currentRound);
+          finalPaymentType = eventType === 'COMP' ? 'Comp' : registrationData.paymentType;
+          finalPaymentAmount = eventType === 'COMP' ? 0 : normalizePaymentAmount(registrationData.paymentAmount);
+        } else {
+          eventType = 'PAY';
+          finalPaymentType = null;
+          finalPaymentAmount = 0;
+        }
+
+        // Create main registration
+        const newReg = {
+          id: crypto.randomUUID(),
+          playerAccountNumber: normalizedPlayer.playerAccountNumber,
+          firstName: normalizedPlayer.firstName,
+          lastName: normalizedPlayer.lastName,
+          eventName: selectedEvent,
+          eventType: eventType,
+          entryType: normalizedPlayer.entryType,
+          paymentType: finalPaymentType,
+          paymentAmount: finalPaymentAmount,
+          paymentType2: registrationData.splitPayment ? registrationData.paymentType2 : null,
+          paymentAmount2: registrationData.splitPayment ? normalizePaymentAmount(registrationData.paymentAmount2) : null,
+          registrationDate: new Date().toISOString(),
+          host: registrationData.host,
+          comment: registrationData.comments,
+          round: currentRound,
+          employee,
+          isRebuy: currentRoundInfo.isRebuy,
+          isMulligan: false,
+          timeSlot: currentTimeSlot,
+          tableNumber: null,
+          seatNumber: null
+        };
+        
+        updatedRegistrations.push(newReg);
+
+        // Add mulligan if requested
+        if (registrationData.addMulligan) {
+          const mulliganData = {
+            id: crypto.randomUUID(),
+            playerAccountNumber: normalizedPlayer.playerAccountNumber,
+            firstName: normalizedPlayer.firstName,
+            lastName: normalizedPlayer.lastName,
+            eventName: selectedEvent,
+            eventType: 'Mulligan',
+            entryType: normalizedPlayer.entryType,
+            paymentType: registrationData.mulliganPaymentType,
+            paymentAmount: normalizePaymentAmount(registrationData.mulliganAmount),
+            paymentType2: registrationData.splitMulliganPayment ? registrationData.mulliganPaymentType2 : null,
+            paymentAmount2: registrationData.splitMulliganPayment ? normalizePaymentAmount(registrationData.mulliganAmount2) : null,
+            registrationDate: new Date().toISOString(),
+            host: registrationData.host,
+            comment: registrationData.comments,
+            round: currentRound,
+            employee,
+            isRebuy: false,
+            isMulligan: true,
+            timeSlot: currentTimeSlot,
+            tableNumber: null,
+            seatNumber: null
+          };
+          updatedRegistrations.push(mulliganData);
+        }
+
+        return updatedRegistrations;
+      });
+
+      // Show second toast and set up for seating
+      setTimeout(() => {
+        toast.success(`${normalizedPlayer.firstName} registered for ${currentRoundInfo.name}!`);
+        
+        // Set up pending registration for seating
+        setRegistrations(currentRegs => {
+          const finalPendingRegs = currentRegs.filter(r => 
+            r.playerAccountNumber === normalizedPlayer.playerAccountNumber && 
+            r.round === currentRound
+          );
+          
+          const pendingRegData = {
+            registrations: finalPendingRegs,
+            player: normalizedPlayer,
+            activeTab: 'registration',
+            selectedRound: currentRound,
+            selectedTimeSlot: currentTimeSlot,
+            paymentType: registrationData.paymentType,
+            paymentAmount: registrationData.paymentAmount,
+            splitPayment: registrationData.splitPayment,
+            paymentType2: registrationData.paymentType2,
+            paymentAmount2: registrationData.paymentAmount2,
+            addMulligan: registrationData.addMulligan,
+            mulliganPaymentType: registrationData.mulliganPaymentType,
+            mulliganAmount: registrationData.mulliganAmount,
+            splitMulliganPayment: registrationData.splitMulliganPayment,
+            mulliganPaymentType2: registrationData.mulliganPaymentType2,
+            mulliganAmount2: registrationData.mulliganAmount2,
+            host: registrationData.host,
+            comments: registrationData.comments
+          };
+          
+          setPendingRegistration(pendingRegData);
+          
+          // Navigate to seating
+          setTimeout(() => {
+            onSeatingNeeded();
+          }, 50);
+          
+          return currentRegs;
+        });
+      }, 100);
     } else {
       clearForm();
     }
-  }, [masterData, setMasterData, clearForm, handleRegistration]);
+  }, [masterData, setMasterData, clearForm, currentRound, currentRoundInfo, selectedEvent, employee, setRegistrations, setPendingRegistration, onSeatingNeeded, determineEventType]);
 
   return {
     // State

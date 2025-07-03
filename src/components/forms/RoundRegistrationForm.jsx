@@ -1,4 +1,4 @@
-// Updated RoundRegistrationForm with simplified LastPlayerCard logic
+// Updated RoundRegistrationForm with conditional PaymentCard visibility
 import React from 'react';
 import { UC } from '../../utils/formatting';
 import SearchBar from '../common/SearchBar';
@@ -69,6 +69,9 @@ const RoundRegistrationForm = ({ hook, currentRound, currentRoundInfo, currentTo
     return `Register for ${currentRoundInfo.name}`;
   };
 
+  // FIXED: Only show PaymentCard for payment rounds
+  const showPaymentCard = ['round1', 'rebuy1', 'rebuy2', 'superrebuy'].includes(currentRound);
+
   // SIMPLIFIED: Create lastPlayer object for LastPlayerCard
   const createLastPlayerData = () => {
     // Hide LastPlayerCard when there's a current player or new player form showing
@@ -92,7 +95,11 @@ const RoundRegistrationForm = ({ hook, currentRound, currentRoundInfo, currentTo
         purchases = `COMP ${currentRoundInfo.name}`;
       } else if (mainRegistration.eventType === 'PAY') {
         // Show payment method and amount for PAY
-        purchases = `${currentRoundInfo.name} ${mainRegistration.paymentType || 'Cash'} $${mainRegistration.paymentAmount}`;
+        if (mainRegistration.paymentType && mainRegistration.paymentAmount > 0) {
+          purchases = `${currentRoundInfo.name} ${mainRegistration.paymentType} $${mainRegistration.paymentAmount}`;
+        } else {
+          purchases = `${currentRoundInfo.name}`;
+        }
       } else {
         // Fallback
         purchases = `${currentRoundInfo.name} $${mainRegistration.paymentAmount || 0}`;
@@ -194,25 +201,27 @@ const RoundRegistrationForm = ({ hook, currentRound, currentRoundInfo, currentTo
             </div>
           </div>
 
-          {/* Payment Card - Always show, but pre-populate for COMP players */}
-          <PaymentCard
-            activeTab="registration"
-            selectedRound={currentRound}
-            paymentType={hook.paymentType}
-            setPaymentType={hook.setPaymentType}
-            paymentAmount={hook.paymentAmount}
-            setPaymentAmount={hook.setPaymentAmount}
-            splitPayment={hook.splitPayment}
-            setSplitPayment={hook.setSplitPayment}
-            paymentType2={hook.paymentType2}
-            setPaymentType2={hook.setPaymentType2}
-            paymentAmount2={hook.paymentAmount2}
-            setPaymentAmount2={hook.setPaymentAmount2}
-            currentPlayer={hook.currentPlayer}
-            currentTournament={currentTournament}
-            getPaymentTypes={() => ['Cash', 'Credit', 'Chips', 'Comp']}
-            handlePaymentTypeChange={hook.handlePaymentTypeChange}
-          />
+          {/* Payment Card - Only show for payment rounds */}
+          {showPaymentCard && (
+            <PaymentCard
+              activeTab="registration"
+              selectedRound={currentRound}
+              paymentType={hook.paymentType}
+              setPaymentType={hook.setPaymentType}
+              paymentAmount={hook.paymentAmount}
+              setPaymentAmount={hook.setPaymentAmount}
+              splitPayment={hook.splitPayment}
+              setSplitPayment={hook.setSplitPayment}
+              paymentType2={hook.paymentType2}
+              setPaymentType2={hook.setPaymentType2}
+              paymentAmount2={hook.paymentAmount2}
+              setPaymentAmount2={hook.setPaymentAmount2}
+              currentPlayer={hook.currentPlayer}
+              currentTournament={currentTournament}
+              getPaymentTypes={() => ['Cash', 'Credit', 'Chips', 'Comp']}
+              handlePaymentTypeChange={hook.handlePaymentTypeChange}
+            />
+          )}
 
           <MulliganCard
             addMulligan={hook.addMulligan}
