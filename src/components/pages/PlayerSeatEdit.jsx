@@ -298,7 +298,7 @@ const PlayerSeatEdit = ({
         document.removeEventListener('keydown', handleEscapeKey);
       };
     }
-  }, [showSeatingModal, playerNeedsReseating, selectedSeatInModal]);
+  }, [showSeatingModal, playerNeedsReseating, selectedSeatInModal, handleCloseModal]);
 
   const EditableSeatingModal = () => {
     if (!showSeatingModal || !modalRound || !modalSelectedTimeSlot) return null;
