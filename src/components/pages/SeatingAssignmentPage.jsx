@@ -1,3 +1,4 @@
+// Updated SeatingAssignmentPage with actual times
 import React, { useState } from 'react';
 import toast from 'react-hot-toast';
 import { useTournamentContext } from '../../context/TournamentContext';
@@ -28,6 +29,22 @@ const SeatingAssignmentPage = () => {
     { key: 'semifinals', name: 'Semifinals', timeSlots: 1 }
   ];
 
+  // Time slot utility function
+  const getTimeSlotName = (round, slotNumber) => {
+    const timeSlotNames = {
+      'round1': ['9:00 AM', '9:45 AM', '10:30 AM', '11:15 AM', '12:00 PM', '12:45 PM'],
+      'rebuy1': ['1:30 PM', '2:15 PM'],
+      'rebuy2': ['3:00 PM'],
+      'round2': ['9:00 AM', '9:45 AM', '10:30 AM'],
+      'superrebuy': ['11:15 AM', '12:00 PM'],
+      'quarterfinals': ['12:45 PM', '1:30 PM'],
+      'semifinals': ['2:30 PM']
+    };
+    
+    const slots = timeSlotNames[round] || [];
+    return slots[slotNumber - 1] || `Slot ${slotNumber}`;
+  };
+
   if (!lastRegisteredPlayer || !pendingRegistration) {
     return (
       <div className="container">
@@ -42,6 +59,7 @@ const SeatingAssignmentPage = () => {
   
   const handleBack = () => navigate('/register');
   const currentRound = rounds.find(r => r.key === lastRegisteredPlayer.round);
+  const timeSlotName = getTimeSlotName(lastRegisteredPlayer.round, lastRegisteredPlayer.timeSlot);
   const getDisabledKey = (round, timeSlot, tableNumber) => `${selectedEvent}-${round}-${timeSlot}-${tableNumber}`;
   const isTableConflicted = (tableNumber) => conflictTables.has(tableNumber);
   const isTableDisabled = (tableNumber) => {
@@ -140,7 +158,7 @@ const SeatingAssignmentPage = () => {
       
       <div className="page-header">
         <h1 className="page-title">
-          {`${selectedEvent} / Player Seating (${currentRound?.name} - Time Slot ${lastRegisteredPlayer.timeSlot})`}
+          {`${selectedEvent} / Player Seating (${currentRound?.name} - ${timeSlotName})`}
         </h1>
       </div>
 

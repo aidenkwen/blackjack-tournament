@@ -57,6 +57,7 @@ body {
   padding: 6px 10px;
   border-radius: 4px;
   transition: background-color 0.2s ease, color 0.2s ease;
+  font-family: 'Figtree', sans-serif;
 }
 
 .nav-link:hover {
@@ -71,6 +72,7 @@ body {
   font-weight: bold;
   margin-top: 24px;    /* Consistent space above title */
   margin-bottom: 20px; /* Smaller space below title */
+  font-family: 'Figtree', sans-serif;
 }
 
 /* Special case for Event Selection page with larger title */
@@ -83,6 +85,7 @@ body {
   font-size: 1rem;
   color: #666666;
   margin-bottom: 24px;
+  font-family: 'Figtree', sans-serif;
 }
 
 /* Subheading spacing when it follows a title */
@@ -115,11 +118,17 @@ body {
   margin-bottom: 16px;
 }
 
+/* Tighter spacing for split payment sections */
+.form-group.split-payment {
+  margin-bottom: 8px;
+}
+
 .form-group label {
   display: block;
   font-size: 0.9rem;
   font-weight: 600;
   margin-bottom: 6px;
+  font-family: 'Figtree', sans-serif;
 }
 
 .input-field,
@@ -133,6 +142,7 @@ body {
   background-color: #ffffff;
   box-sizing: border-box;
   transition: border-color 0.2s ease;
+  font-family: 'Figtree', sans-serif;
 }
 
 .input-field:focus,
@@ -158,10 +168,62 @@ body {
   margin-bottom: 16px;
 }
 
+/* Ensure consistent card sizing - payment and mulligan cards now have identical styling */
+.card.payment-card,
+.card.mulligan-card {
+  padding: 16px 16px 8px 16px;   /* Same padding for all cards */
+  margin-bottom: 16px;           /* Same margin for all cards */
+}
+
+/* Payment Card Specific Styling */
+.payment-card .payment-fields-row {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 8px; /* Reduced from 16px to 8px for tighter spacing */
+}
+
+.payment-card .split-payment-checkbox {
+  margin-bottom: 8px; /* Reduced spacing above split payment section */
+}
+
+.payment-card .split-payment-fields {
+  display: flex;
+  gap: 16px;
+  margin-top: 20px; /* Slightly bigger spacing between split checkbox and split fields */
+}
+
+/* Mulligan Card Specific Styling - matching Payment Card */
+.mulligan-card .mulligan-fields-row {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 8px; /* Same as payment card */
+}
+
+.mulligan-card .mulligan-checkbox {
+  margin-bottom: 24px; /* More spacing between Include Mulligan and Mulligan Payment Type */
+}
+
+.mulligan-card .split-mulligan-checkbox {
+  margin-bottom: 8px; /* Reduced spacing above split mulligan section */
+}
+
+.mulligan-card .split-mulligan-fields {
+  display: flex;
+  gap: 16px;
+  margin-top: 20px; /* Slightly bigger spacing between split checkbox and split fields */
+}
+
 .card-title {
   font-size: 1rem;
   font-weight: bold;
   margin-bottom: 8px;
+  font-family: 'Figtree', sans-serif;
+}
+
+/* Special spacing for Mulligan card title */
+.mulligan-card .card-title {
+  margin-bottom: 16px; /* More space between "Mulligan" title and "Include Mulligan" checkbox */
+  font-size: 1.1rem; /* Match the payment card title size */
 }
 
 /* 6) BUTTONS
@@ -212,7 +274,6 @@ body {
 }
 
 /* New small hyperlink-style red back button */
-/* small hyperlink-style red back button */
 .link-back {
   background: none;
   border: none;
@@ -223,7 +284,7 @@ body {
   padding: 0;
   text-decoration: none;
   transition: color 0.2s ease, text-decoration 0.2s ease;
-  font-family: 'Figtree', sans-serif;   /* ← add this line */
+  font-family: 'Figtree', sans-serif;
 }
 
 .link-back:hover {
@@ -237,7 +298,7 @@ body {
   margin-bottom: 8px;    /* Less space below back button */
 }
 
-/* 7) TABS
+/* 7) TABS - HORIZONTAL
    -------------------------------------------------------------- */
 .tabs {
   display: flex;
@@ -251,6 +312,7 @@ body {
   font-weight: bold;
   color: #333333;
   transition: color 0.2s ease, border-bottom 0.2s ease;
+  font-family: 'Figtree', sans-serif;
 }
 
 .tab:not(.active):hover {
@@ -262,6 +324,77 @@ body {
   color: #8b0000;
 }
 
+/* 7B) VERTICAL TABS - NEW
+   -------------------------------------------------------------- */
+.vertical-tab {
+  background-color: #ffffff;
+  border: none; /* Remove all borders for no stroke effect */
+  border-radius: 0; /* No border radius */
+  padding: 16px 20px; /* Increased padding for bigger tabs */
+  cursor: pointer;
+  text-align: left;
+  font-size: 1rem; /* Increased from 0.9rem for bigger text */
+  font-weight: bold;
+  transition: all 0.2s ease;
+  font-family: 'Figtree', sans-serif;
+  color: #000000; /* Black text for inactive */
+  margin-bottom: 0; /* No spacing between tabs */
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  box-shadow: none; /* No box shadow for inactive */
+}
+
+.vertical-tab:hover {
+  background-color: #ffffff; /* White background */
+  color: #8b0000; /* Red text */
+  box-shadow: inset -4px 0 0 #8b0000; /* Red right-side box shadow */
+}
+
+.vertical-tab.active {
+  background-color: #ffffff; /* White background */
+  color: #8b0000; /* Red text */
+  font-weight: bold;
+  box-shadow: inset -4px 0 0 #8b0000; /* Red right-side box shadow */
+}
+
+.vertical-tab.active:hover {
+  background-color: #ffffff; /* White background */
+  color: #8b0000; /* Red text */
+  box-shadow: inset -4px 0 0 #8b0000; /* Red right-side box shadow */
+}
+
+/* Vertical tabs container with right border separator that extends to bottom of screen */
+.vertical-tabs-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  min-width: 200px;
+  border-right: 1px solid #ddd; /* Light grey separator line */
+  padding-right: 0; /* No padding so border is flush with tabs */
+  position: relative;
+}
+
+/* Pseudo-element to extend line to bottom of screen */
+.vertical-tabs-container::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 100%;
+  width: 1px;
+  height: 50vh; /* Reduced from 100vh to 50vh */
+  background-color: #ddd;
+  pointer-events: none;
+}
+
+.vertical-tabs-title {
+  margin: 0 0 16px 0;
+  font-size: 1.1rem;
+  color: #333;
+  font-family: 'Figtree', sans-serif;
+  font-weight: 600;
+}
+
 /* 8) ALERT / FEEDBACK BANNERS
    -------------------------------------------------------------- */
 .alert {
@@ -271,6 +404,7 @@ body {
   border-radius: 4px;
   margin-bottom: 16px;
   font-size: 0.95rem;
+  font-family: 'Figtree', sans-serif;
 }
 
 .alert-success {
@@ -365,6 +499,7 @@ body {
 .data-management-section h3 {
   margin: 0 0 12px 0; /* Increased from 8px to 12px */
   font-size: 1.1rem; /* Fixed typo: was fontSize, now font-size */
+  font-family: 'Figtree', sans-serif;
 }
 
 .data-management-buttons {
@@ -378,6 +513,7 @@ body {
   margin: 8px 0 0 0;
   font-size: 0.85rem;
   color: #666;
+  font-family: 'Figtree', sans-serif;
 }
 
 .btn-danger {
@@ -418,6 +554,7 @@ body {
   margin: 0;
   font-size: 1rem;
   color: #666666;
+  font-family: 'Figtree', sans-serif;
 }
 
 /* ===================================================================
@@ -430,6 +567,7 @@ body {
   font-weight: bold;
   margin: 0;
   line-height: 1.2;
+  font-family: 'Figtree', sans-serif;
 }
 
 /* Secondary player name display - used in cards, lists, smaller contexts */
@@ -438,6 +576,7 @@ body {
   font-weight: bold;
   margin: 0;
   line-height: 1.2;
+  font-family: 'Figtree', sans-serif;
 }
 
 /* Compact player name display - used in tight spaces like seating charts */
@@ -446,6 +585,7 @@ body {
   font-weight: bold;
   margin: 0;
   line-height: 1.1;
+  font-family: 'Figtree', sans-serif;
 }
 
 /* Player name with account - inline format "Name, Account" */
@@ -454,6 +594,7 @@ body {
   font-weight: bold;
   margin: 0;
   line-height: 1.2;
+  font-family: 'Figtree', sans-serif;
 }
 
 .player-name-with-account .account-part {
@@ -484,6 +625,7 @@ body {
   font-size: 0.95rem;
   color: #666666;
   margin: 0;
+  font-family: 'Figtree', sans-serif;
 }
 
 /* Player info container for consistent spacing */
@@ -512,6 +654,7 @@ body {
   font-size: 0.8rem;
   font-weight: bold;
   margin-bottom: 2px;
+  font-family: 'Figtree', sans-serif;
 }
 
 /* Tournament info display */
@@ -519,12 +662,14 @@ body {
   font-size: 1.1rem;
   font-weight: bold;
   margin: 0;
+  font-family: 'Figtree', sans-serif;
 }
 
 .tournament-metadata {
   font-size: 0.9rem;
   color: #666666;
   margin: 0;
+  font-family: 'Figtree', sans-serif;
 }
 
 /* Round and time slot display */
@@ -533,12 +678,14 @@ body {
   font-weight: 600;
   color: #333333;
   margin: 0;
+  font-family: 'Figtree', sans-serif;
 }
 
 .time-slot-info {
   font-size: 0.9rem;
   color: #666666;
   margin: 0;
+  font-family: 'Figtree', sans-serif;
 }
 
 /* Legacy compatibility - maintain existing behavior */
@@ -546,6 +693,7 @@ body {
   font-size: 1.5rem;
   font-weight: bold;
   margin: 0;
+  font-family: 'Figtree', sans-serif;
 }
 
 /* Ensure backward compatibility with existing h3 elements */
@@ -555,4 +703,81 @@ h3.player-name-secondary {
   font-size: inherit;
   font-weight: inherit;
   margin: inherit;
+  font-family: 'Figtree', sans-serif;
+}
+
+/* Ensure all h1, h2, h3, h4, h5, h6 use Figtree */
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Figtree', sans-serif;
+}
+
+/* Ensure all p elements use Figtree */
+p {
+  font-family: 'Figtree', sans-serif;
+}
+
+/* Round Info Header Styling for Vertical Tab Content */
+.round-info-header {
+  background-color: #f8f9fa;
+  padding: 16px;
+  border-radius: 8px;
+  margin-bottom: 24px;
+  border: 1px solid #e9ecef;
+}
+
+.round-info-header h2 {
+  margin: 0 0 8px 0;
+  font-size: 1.3rem;
+  color: #8b0000;
+  font-family: 'Figtree', sans-serif;
+  font-weight: 600;
+}
+
+.round-info-header p {
+  margin: 0;
+  color: #666;
+  font-size: 0.9rem;
+  font-family: 'Figtree', sans-serif;
+}
+
+/* Tournament Card Styling for Manage Tournaments Page */
+.tournament-card {
+  background-color: #f5f5f5; /* Light grey background */
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 16px;
+  margin-bottom: 16px;
+  box-sizing: border-box;
+}
+
+.tournament-card-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.tournament-info {
+  flex: 1;
+}
+
+.tournament-active-badge {
+  color: #8b0000;
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-left: 8px;
+}
+
+.tournament-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.tournament-manage-btn {
+  font-size: 0.9rem;
+}
+
+.tournament-delete-btn {
+  font-size: 0.9rem;
 }

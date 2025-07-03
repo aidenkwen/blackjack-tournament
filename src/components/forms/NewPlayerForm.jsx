@@ -1,15 +1,12 @@
+// Updated NewPlayerForm with actual times
 import React, { useState } from 'react';
 import { UC } from '../../utils/formatting';
-import PaymentCard from '../cards/PaymentCard';
-import MulliganCard from '../cards/MulliganCard';
 
 const NewPlayerForm = ({
   accountNumber,
   currentTournament,
   onSave,
   onCancel,
-  selectedEvent,
-  employee,
   host,
   setHost,
   comments,
@@ -20,6 +17,7 @@ const NewPlayerForm = ({
   const [lastName, setLastName] = useState('');
   const [entryType, setEntryType] = useState('PAY');
   const [registerForRound1, setRegisterForRound1] = useState(canRegisterForRound1);
+  const [selectedTimeSlot, setSelectedTimeSlot] = useState('');
   const [paymentType, setPaymentType] = useState('');
   const [paymentAmount, setPaymentAmount] = useState(currentTournament.entryCost.toString());
   const [splitPayment, setSplitPayment] = useState(false);
@@ -31,6 +29,16 @@ const NewPlayerForm = ({
   const [splitMulliganPayment, setSplitMulliganPayment] = useState(false);
   const [mulliganPaymentType2, setMulliganPaymentType2] = useState('');
   const [mulliganAmount2, setMulliganAmount2] = useState('');
+
+  // Time slots for Round 1
+  const getTimeSlots = () => [
+    { value: 1, name: '9:00 AM' },
+    { value: 2, name: '9:45 AM' },
+    { value: 3, name: '10:30 AM' },
+    { value: 4, name: '11:15 AM' },
+    { value: 5, name: '12:00 PM' },
+    { value: 6, name: '12:45 PM' }
+  ];
 
   const handleEntryTypeChange = (newEntryType) => {
     setEntryType(newEntryType);
@@ -60,6 +68,11 @@ const NewPlayerForm = ({
       return;
     }
 
+    if (registerForRound1 && !selectedTimeSlot) {
+      alert('Please select a time slot for Round 1 registration.');
+      return;
+    }
+
     const newPlayer = {
       playerAccountNumber: accountNumber,
       firstName: firstName.trim(),
@@ -69,6 +82,7 @@ const NewPlayerForm = ({
     };
 
     const registrationData = {
+      selectedTimeSlot,
       paymentType,
       paymentAmount,
       splitPayment,
@@ -150,40 +164,205 @@ const NewPlayerForm = ({
 
           {registerForRound1 && (
             <>
-              <PaymentCard
-                activeTab="registration"
-                selectedRound="round1"
-                paymentType={paymentType}
-                setPaymentType={setPaymentType}
-                paymentAmount={paymentAmount}
-                setPaymentAmount={setPaymentAmount}
-                splitPayment={splitPayment}
-                setSplitPayment={setSplitPayment}
-                paymentType2={paymentType2}
-                setPaymentType2={setPaymentType2}
-                paymentAmount2={paymentAmount2}
-                setPaymentAmount2={setPaymentAmount2}
-                currentPlayer={{ entryType }}
-                currentTournament={currentTournament}
-                getPaymentTypes={getPaymentTypes}
-                handlePaymentTypeChange={handlePaymentTypeChange}
-              />
+              {/* Time Slot Selection */}
+              <div className="card" style={{ marginBottom: '16px' }}>
+                <h4 style={{ margin: '0 0 16px 0', fontSize: '1.1rem' }}>Round 1 Registration</h4>
+                <div className="form-group">
+                  <label className="mb-2">Time Slot</label>
+                  <select
+                    value={selectedTimeSlot}
+                    onChange={(e) => setSelectedTimeSlot(e.target.value)}
+                    className="select-field"
+                    style={{ maxWidth: '300px' }}
+                  >
+                    <option value="">-- Select Time Slot --</option>
+                    {getTimeSlots().map(slot => (
+                      <option key={slot.value} value={slot.value}>
+                        {slot.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
 
-              <MulliganCard
-                addMulligan={addMulligan}
-                setAddMulligan={setAddMulligan}
-                mulliganPaymentType={mulliganPaymentType}
-                setMulliganPaymentType={setMulliganPaymentType}
-                mulliganAmount={mulliganAmount}
-                setMulliganAmount={setMulliganAmount}
-                splitMulliganPayment={splitMulliganPayment}
-                setSplitMulliganPayment={setSplitMulliganPayment}
-                mulliganPaymentType2={mulliganPaymentType2}
-                setMulliganPaymentType2={setMulliganPaymentType2}
-                mulliganAmount2={mulliganAmount2}
-                setMulliganAmount2={setMulliganAmount2}
-                currentTournament={currentTournament}
-              />
+              {/* Payment Card */}
+              <div className="card" style={{ marginBottom: '16px' }}>
+                <h4 style={{ margin: '0 0 16px 0', fontSize: '1.1rem' }}>Registration Payment</h4>
+                
+                <div style={{ display: 'flex', gap: '16px', marginBottom: '16px' }}>
+                  <div style={{ flex: 1 }}>
+                    <div className="form-group">
+                      <label className="mb-2">Payment Type</label>
+                      <select
+                        value={paymentType}
+                        onChange={(e) => handlePaymentTypeChange(e.target.value)}
+                        className="select-field"
+                      >
+                        <option value="">-- Select Payment Type --</option>
+                        {getPaymentTypes().map(type => (
+                          <option key={type} value={type}>{type}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  <div style={{ flex: 1 }}>
+                    <div className="form-group">
+                      <label className="mb-2">Amount (Expected: ${currentTournament.entryCost})</label>
+                      <input
+                        type="number"
+                        value={paymentAmount}
+                        onChange={(e) => setPaymentAmount(e.target.value)}
+                        className="input-field"
+                        placeholder={currentTournament.entryCost.toString()}
+                        disabled={paymentType === 'Comp'}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="form-group">
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                    <input
+                      type="checkbox"
+                      checked={splitPayment}
+                      onChange={(e) => setSplitPayment(e.target.checked)}
+                      disabled={paymentType === 'Comp'}
+                    />
+                    <span>Split Payment</span>
+                  </label>
+                </div>
+
+                {splitPayment && paymentType !== 'Comp' && (
+                  <div style={{ display: 'flex', gap: '16px' }}>
+                    <div style={{ flex: 1 }}>
+                      <div className="form-group">
+                        <label className="mb-2">Second Payment Type</label>
+                        <select
+                          value={paymentType2}
+                          onChange={(e) => setPaymentType2(e.target.value)}
+                          className="select-field"
+                        >
+                          <option value="">-- Select Second Payment Type --</option>
+                          {getPaymentTypes().filter(type => type !== 'Comp' && type !== paymentType).map(type => (
+                            <option key={type} value={type}>{type}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <div className="form-group">
+                        <label className="mb-2">Second Amount</label>
+                        <input
+                          type="number"
+                          value={paymentAmount2}
+                          onChange={(e) => setPaymentAmount2(e.target.value)}
+                          className="input-field"
+                          placeholder="0"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Mulligan Card */}
+              <div className="card mb-4">
+                <div className="card-title">Mulligan</div>
+
+                <div className="form-group">
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={addMulligan}
+                      onChange={(e) => setAddMulligan(e.target.checked)}
+                    />{' '}
+                    Include Mulligan
+                  </label>
+                </div>
+
+                {addMulligan && (
+                  <>
+                    <div style={{ display: 'flex', gap: '16px' }}>
+                      <div style={{ flex: 1 }}>
+                        <div className="form-group">
+                          <label className="mb-2">Mulligan Payment Type</label>
+                          <select
+                            value={mulliganPaymentType}
+                            onChange={(e) => setMulliganPaymentType(e.target.value)}
+                            className="select-field"
+                          >
+                            <option value="">-- Select payment type --</option>
+                            {['Cash', 'Credit', 'Chips'].map((type) => (
+                              <option key={type} value={type}>
+                                {type}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+
+                      <div style={{ flex: 1 }}>
+                        <div className="form-group">
+                          <label className="mb-2">Mulligan Amount</label>
+                          <input
+                            type="number"
+                            value={mulliganAmount}
+                            onChange={(e) => setMulliganAmount(e.target.value)}
+                            className="input-field"
+                            placeholder={currentTournament.mulliganCost.toString()}
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="form-group">
+                      <label>
+                        <input
+                          type="checkbox"
+                          checked={splitMulliganPayment}
+                          onChange={(e) => setSplitMulliganPayment(e.target.checked)}
+                        />
+                        {' '}
+                        Split Mulligan Payment
+                      </label>
+                    </div>
+
+                    {splitMulliganPayment && (
+                      <div style={{ display: 'flex', gap: '16px' }}>
+                        <div style={{ flex: 1 }}>
+                          <div className="form-group">
+                            <label className="mb-2">Mulligan Payment Type 2</label>
+                            <select
+                              value={mulliganPaymentType2}
+                              onChange={(e) => setMulliganPaymentType2(e.target.value)}
+                              className="select-field"
+                            >
+                              <option value="">-- Select payment type --</option>
+                              {['Cash', 'Credit', 'Chips'].filter(type => type !== mulliganPaymentType).map((type) => (
+                                <option key={type} value={type}>
+                                  {type}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        </div>
+                        <div style={{ flex: 1 }}>
+                          <div className="form-group">
+                            <label className="mb-2">Mulligan Amount 2</label>
+                            <input
+                              type="number"
+                              value={mulliganAmount2}
+                              onChange={(e) => setMulliganAmount2(e.target.value)}
+                              className="input-field"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
 
               <div className="form-group">
                 <label className="mb-2">Host</label>

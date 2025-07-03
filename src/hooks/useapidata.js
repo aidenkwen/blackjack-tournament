@@ -8,24 +8,32 @@ const STORAGE_KEYS = {
   REGISTRATIONS: 'blackjack_registrations'
 };
 
-// Helper functions for localStorage
-const getFromStorage = (key, defaultValue = []) => {
-  try {
-    const item = localStorage.getItem(key);
-    return item ? JSON.parse(item) : defaultValue;
-  } catch (error) {
-    console.error(`Error reading from localStorage (${key}):`, error);
-    return defaultValue;
+// FIXED: Better localStorage error handling
+const safeLocalStorage = {
+  getItem: (key, defaultValue = []) => {
+    try {
+      const item = localStorage.getItem(key);
+      return item ? JSON.parse(item) : defaultValue;
+    } catch (error) {
+      console.error(`LocalStorage read error for ${key}:`, error);
+      return defaultValue;
+    }
+  },
+  
+  setItem: (key, value) => {
+    try {
+      localStorage.setItem(key, JSON.stringify(value));
+      return true;
+    } catch (error) {
+      console.error(`LocalStorage write error for ${key}:`, error);
+      return false;
+    }
   }
 };
 
-const setToStorage = (key, value) => {
-  try {
-    localStorage.setItem(key, JSON.stringify(value));
-  } catch (error) {
-    console.error(`Error writing to localStorage (${key}):`, error);
-  }
-};
+// Helper functions for localStorage (using safe version)
+const getFromStorage = (key, defaultValue = []) => safeLocalStorage.getItem(key, defaultValue);
+const setToStorage = (key, value) => safeLocalStorage.setItem(key, value);
 
 export const useTournaments = () => {
   const [tournaments, setTournaments] = useState([]);
@@ -57,9 +65,12 @@ export const useTournaments = () => {
         createdAt: new Date().toISOString()
       };
       
-      const updatedTournaments = [newTournament, ...tournaments];
-      setTournaments(updatedTournaments);
-      setToStorage(STORAGE_KEYS.TOURNAMENTS, updatedTournaments);
+      // FIXED: Use functional update to prevent stale state
+      setTournaments(prevTournaments => {
+        const updatedTournaments = [newTournament, ...prevTournaments];
+        setToStorage(STORAGE_KEYS.TOURNAMENTS, updatedTournaments);
+        return updatedTournaments;
+      });
       
       return newTournament;
     } catch (err) {
@@ -71,22 +82,32 @@ export const useTournaments = () => {
   const deleteTournament = async (tournamentId) => {
     try {
       setError(null);
-      const updatedTournaments = tournaments.filter(t => t.id !== tournamentId);
-      setTournaments(updatedTournaments);
-      setToStorage(STORAGE_KEYS.TOURNAMENTS, updatedTournaments);
       
-      // Also clean up related data
-      const allPlayers = getFromStorage(STORAGE_KEYS.TOURNAMENT_PLAYERS, {});
-      const tournamentToDelete = tournaments.find(t => t.id === tournamentId);
-      if (tournamentToDelete && allPlayers[tournamentToDelete.name]) {
-        delete allPlayers[tournamentToDelete.name];
-        setToStorage(STORAGE_KEYS.TOURNAMENT_PLAYERS, allPlayers);
-      }
-      
-      // Clean up registrations for this tournament
-      const allRegistrations = getFromStorage(STORAGE_KEYS.REGISTRATIONS, []);
-      const updatedRegistrations = allRegistrations.filter(r => r.eventName !== tournamentToDelete?.name);
-      setToStorage(STORAGE_KEYS.REGISTRATIONS, updatedRegistrations);
+      // FIXED: Use functional update and find tournament before filtering
+      setTournaments(prevTournaments => {
+        // Find the tournament to delete BEFORE filtering it out
+        const tournamentToDelete = prevTournaments.find(t => t.id === tournamentId);
+        
+        // Remove tournament from the list
+        const updatedTournaments = prevTournaments.filter(t => t.id !== tournamentId);
+        setToStorage(STORAGE_KEYS.TOURNAMENTS, updatedTournaments);
+        
+        // Clean up related data only if tournament was found
+        if (tournamentToDelete) {
+          const allPlayers = getFromStorage(STORAGE_KEYS.TOURNAMENT_PLAYERS, {});
+          if (allPlayers[tournamentToDelete.name]) {
+            delete allPlayers[tournamentToDelete.name];
+            setToStorage(STORAGE_KEYS.TOURNAMENT_PLAYERS, allPlayers);
+          }
+          
+          // Clean up registrations for this tournament
+          const allRegistrations = getFromStorage(STORAGE_KEYS.REGISTRATIONS, []);
+          const updatedRegistrations = allRegistrations.filter(r => r.eventName !== tournamentToDelete.name);
+          setToStorage(STORAGE_KEYS.REGISTRATIONS, updatedRegistrations);
+        }
+        
+        return updatedTournaments;
+      });
       
     } catch (err) {
       setError(err.message);
@@ -94,8 +115,27 @@ export const useTournaments = () => {
     }
   };
 
+  // FIXED: Add cleanup for useEffect
   useEffect(() => {
-    loadTournaments();
+    let isMounted = true;
+    
+    const loadData = async () => {
+      try {
+        await loadTournaments();
+        // Data already set in loadTournaments, no need to use returned data
+      } catch (error) {
+        if (isMounted) {
+          console.error('Failed to load tournaments:', error);
+        }
+      }
+    };
+
+    loadData();
+
+    return () => {
+      isMounted = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return {
@@ -123,6 +163,7 @@ export const useTournamentPlayers = (selectedEvent) => {
       const allPlayers = getFromStorage(STORAGE_KEYS.TOURNAMENT_PLAYERS, {});
       const players = allPlayers[eventName] || [];
       
+      // FIXED: Use functional update
       setTournamentPlayers(prev => ({
         ...prev,
         [eventName]: players
@@ -144,16 +185,20 @@ export const useTournamentPlayers = (selectedEvent) => {
 
   const setCurrentTournamentPlayers = (players) => {
     if (selectedEvent) {
-      const updatedPlayers = {
-        ...tournamentPlayers,
-        [selectedEvent]: players
-      };
-      setTournamentPlayers(updatedPlayers);
-      
-      // Update localStorage
-      const allPlayers = getFromStorage(STORAGE_KEYS.TOURNAMENT_PLAYERS, {});
-      allPlayers[selectedEvent] = players;
-      setToStorage(STORAGE_KEYS.TOURNAMENT_PLAYERS, allPlayers);
+      // FIXED: Use functional update
+      setTournamentPlayers(prev => {
+        const updatedPlayers = {
+          ...prev,
+          [selectedEvent]: players
+        };
+        
+        // Update localStorage
+        const allPlayers = getFromStorage(STORAGE_KEYS.TOURNAMENT_PLAYERS, {});
+        allPlayers[selectedEvent] = players;
+        setToStorage(STORAGE_KEYS.TOURNAMENT_PLAYERS, allPlayers);
+        
+        return updatedPlayers;
+      });
     }
   };
 
@@ -206,16 +251,20 @@ export const useTournamentPlayers = (selectedEvent) => {
               return;
             }
             
-            // Store players
-            const allPlayers = getFromStorage(STORAGE_KEYS.TOURNAMENT_PLAYERS, {});
-            allPlayers[eventName] = players;
-            setToStorage(STORAGE_KEYS.TOURNAMENT_PLAYERS, allPlayers);
-            
-            // Update state
-            setTournamentPlayers(prev => ({
-              ...prev,
-              [eventName]: players
-            }));
+            // FIXED: Use functional update for state
+            setTournamentPlayers(prev => {
+              const updatedPlayers = {
+                ...prev,
+                [eventName]: players
+              };
+              
+              // Store players
+              const allPlayers = getFromStorage(STORAGE_KEYS.TOURNAMENT_PLAYERS, {});
+              allPlayers[eventName] = players;
+              setToStorage(STORAGE_KEYS.TOURNAMENT_PLAYERS, allPlayers);
+              
+              return updatedPlayers;
+            });
             
             console.log(`Parsed ${players.length} players for tournament: ${eventName}`);
             
@@ -249,10 +298,27 @@ export const useTournamentPlayers = (selectedEvent) => {
     }
   };
 
+  // FIXED: Add cleanup for useEffect
   useEffect(() => {
+    let isMounted = true;
+    
     if (selectedEvent) {
-      loadPlayers(selectedEvent);
+      const loadData = async () => {
+        try {
+          await loadPlayers(selectedEvent);
+        } catch (error) {
+          if (isMounted) {
+            console.error('Failed to load players:', error);
+          }
+        }
+      };
+
+      loadData();
     }
+
+    return () => {
+      isMounted = false;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedEvent]);
 
@@ -300,13 +366,16 @@ export const useRegistrations = (selectedEvent) => {
         createdAt: new Date().toISOString()
       };
       
-      const allRegistrations = getFromStorage(STORAGE_KEYS.REGISTRATIONS, []);
-      const updatedRegistrations = [...allRegistrations, newRegistration];
-      setToStorage(STORAGE_KEYS.REGISTRATIONS, updatedRegistrations);
-      
-      // Update local state
-      const eventRegistrations = updatedRegistrations.filter(r => r.eventName === selectedEvent);
-      setRegistrations(eventRegistrations);
+      // FIXED: Use functional update
+      setRegistrations(prevRegistrations => {
+        const allRegistrations = getFromStorage(STORAGE_KEYS.REGISTRATIONS, []);
+        const updatedRegistrations = [...allRegistrations, newRegistration];
+        setToStorage(STORAGE_KEYS.REGISTRATIONS, updatedRegistrations);
+        
+        // Update local state
+        const eventRegistrations = updatedRegistrations.filter(r => r.eventName === selectedEvent);
+        return eventRegistrations;
+      });
       
       return newRegistration;
     } catch (err) {
@@ -315,26 +384,39 @@ export const useRegistrations = (selectedEvent) => {
     }
   };
 
-  // Custom function to update registrations (used by seating assignment)
-  const updateRegistrations = (newRegistrations) => {
+  // FIXED: Registration update function that handles both arrays and functional updates
+  const updateRegistrations = (newRegistrationsOrUpdater) => {
     try {
       setError(null);
       
-      // Get all registrations from storage
-      const allRegistrations = getFromStorage(STORAGE_KEYS.REGISTRATIONS, []);
-      
-      // Filter out old registrations for this event
-      const otherEventRegistrations = allRegistrations.filter(r => r.eventName !== selectedEvent);
-      
-      // Add new registrations for this event
-      const eventRegistrations = newRegistrations.filter(r => r.eventName === selectedEvent);
-      const updatedAllRegistrations = [...otherEventRegistrations, ...eventRegistrations];
-      
-      // Save to storage
-      setToStorage(STORAGE_KEYS.REGISTRATIONS, updatedAllRegistrations);
-      
-      // Update local state
-      setRegistrations(eventRegistrations);
+      setRegistrations(prevRegistrations => {
+        // Handle functional update
+        if (typeof newRegistrationsOrUpdater === 'function') {
+          const updatedRegistrations = newRegistrationsOrUpdater(prevRegistrations);
+          
+          // Update localStorage with all registrations
+          const allRegistrations = getFromStorage(STORAGE_KEYS.REGISTRATIONS, []);
+          const otherEventRegistrations = allRegistrations.filter(r => r.eventName !== selectedEvent);
+          const updatedAllRegistrations = [...otherEventRegistrations, ...updatedRegistrations];
+          setToStorage(STORAGE_KEYS.REGISTRATIONS, updatedAllRegistrations);
+          
+          return updatedRegistrations;
+        }
+        
+        // Handle direct array update
+        if (Array.isArray(newRegistrationsOrUpdater)) {
+          const allRegistrations = getFromStorage(STORAGE_KEYS.REGISTRATIONS, []);
+          const otherEventRegistrations = allRegistrations.filter(r => r.eventName !== selectedEvent);
+          const eventRegistrations = newRegistrationsOrUpdater.filter(r => r.eventName === selectedEvent);
+          const updatedAllRegistrations = [...otherEventRegistrations, ...eventRegistrations];
+          setToStorage(STORAGE_KEYS.REGISTRATIONS, updatedAllRegistrations);
+          return eventRegistrations;
+        }
+        
+        // Invalid input - return previous state unchanged
+        console.error('updateRegistrations called with invalid input:', newRegistrationsOrUpdater);
+        return prevRegistrations;
+      });
       
     } catch (err) {
       setError(err.message);
@@ -342,21 +424,31 @@ export const useRegistrations = (selectedEvent) => {
     }
   };
 
+  // FIXED: Add cleanup for useEffect
   useEffect(() => {
+    let isMounted = true;
+    
     if (selectedEvent) {
-      loadRegistrations(selectedEvent);
+      const loadData = async () => {
+        try {
+          await loadRegistrations(selectedEvent);
+        } catch (error) {
+          if (isMounted) {
+            console.error('Failed to load registrations:', error);
+          }
+        }
+      };
+
+      loadData();
     }
+
+    return () => {
+      isMounted = false;
+    };
   }, [selectedEvent]);
 
-  // Sync registrations with localStorage when they change
-  useEffect(() => {
-    if (selectedEvent && registrations.length > 0) {
-      const allRegistrations = getFromStorage(STORAGE_KEYS.REGISTRATIONS, []);
-      const otherEventRegistrations = allRegistrations.filter(r => r.eventName !== selectedEvent);
-      const updatedAllRegistrations = [...otherEventRegistrations, ...registrations];
-      setToStorage(STORAGE_KEYS.REGISTRATIONS, updatedAllRegistrations);
-    }
-  }, [registrations, selectedEvent]);
+  // FIXED: Remove problematic sync effect that could cause infinite loops
+  // The updateRegistrations function now handles localStorage directly
 
   return {
     registrations,

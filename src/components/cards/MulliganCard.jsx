@@ -21,10 +21,10 @@ const MulliganCard = ({
   };
 
   return (
-    <div className="card mb-4">
+    <div className="card mulligan-card">
       <div className="card-title">Mulligan</div>
 
-      <div className="form-group">
+      <div className="form-group mulligan-checkbox">
         <label>
           <input
             type="checkbox"
@@ -37,7 +37,7 @@ const MulliganCard = ({
 
       {addMulligan && (
         <>
-          <div style={{ display: 'flex', gap: '16px' }}>
+          <div className="mulligan-fields-row">
             <div style={{ flex: 1 }}>
               <div className="form-group">
                 <label className="mb-2">Mulligan Payment Type</label>
@@ -76,7 +76,7 @@ const MulliganCard = ({
             </div>
           </div>
 
-          <div className="form-group">
+          <div className="form-group split-mulligan-checkbox">
             <label>
               <input
                 type="checkbox"
@@ -89,10 +89,10 @@ const MulliganCard = ({
           </div>
 
           {splitMulliganPayment && (
-            <div style={{ display: 'flex', gap: '16px' }}>
+            <div className="split-mulligan-fields">
               <div style={{ flex: 1 }}>
                 <div className="form-group">
-                  <label className="mb-2">Mulligan Payment Type 2</label>
+                  <label className="mb-2">Second Mulligan Payment Type</label>
                   <select
                     value={mulliganPaymentType2}
                     onChange={(e) => setMulliganPaymentType2(e.target.value)}
@@ -109,7 +109,7 @@ const MulliganCard = ({
               </div>
               <div style={{ flex: 1 }}>
                 <div className="form-group">
-                  <label className="mb-2">Mulligan Amount 2</label>
+                  <label className="mb-2">Second Mulligan Amount</label>
                   <input
                     type="number"
                     value={mulliganAmount2}

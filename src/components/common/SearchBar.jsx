@@ -21,7 +21,7 @@ const SearchBar = ({
   const safeOnSearch = useCallback(() => {
     // Ensure searchValue is always a string before calling onSearch
     const currentValue = String(searchValue || '');
-    if (currentValue.trim()) {
+    if (currentValue.trim() && onSearch) {
       onSearch();
     }
   }, [searchValue, onSearch]);
@@ -59,7 +59,9 @@ const SearchBar = ({
               onCardSwipe(newBuffer);
             } else {
               // Default behavior: set as search value and trigger search
-              onSearchChange(newBuffer);
+              if (onSearchChange) {
+                onSearchChange(newBuffer);
+              }
               setTimeout(() => safeOnSearch(), 100); // Use safe search wrapper
             }
           }
@@ -88,7 +90,14 @@ const SearchBar = ({
   const handleInputChange = (e) => {
     // Reset card buffer when manually typing
     setCardBuffer('');
-    onSearchChange(e.target.value);
+    // *** FIX: Add safety check for onSearchChange ***
+    if (onSearchChange) {
+      onSearchChange(e.target.value);
+    }
+  };
+
+  const handleSearchClick = () => {
+    safeOnSearch();
   };
 
   return (
@@ -106,7 +115,7 @@ const SearchBar = ({
           autoComplete="off"
         />
         <button
-          onClick={safeOnSearch} // Use safe search wrapper
+          onClick={handleSearchClick} // Use safe search wrapper
           className="btn btn-primary"
           disabled={disabled}
         >

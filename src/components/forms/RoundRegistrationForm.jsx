@@ -1,3 +1,4 @@
+// Updated RoundRegistrationForm with actual times
 import React from 'react';
 import { UC } from '../../utils/formatting';
 import SearchBar from '../common/SearchBar';
@@ -5,18 +6,59 @@ import NewPlayerForm from './NewPlayerForm';
 import PaymentCard from '../cards/PaymentCard';
 import MulliganCard from '../cards/MulliganCard';
 import PlayerInfoCard from '../cards/PlayerInfoCard';
+import LastPlayerCard from '../cards/LastPlayerCard';
 
-const RoundRegistrationForm = ({ hook, currentRound, currentRoundInfo, currentTournament }) => {
-  const handleSearch = (searchAccount) => {
-    hook.searchPlayer(searchAccount);
+const RoundRegistrationForm = ({ hook, currentRound, currentRoundInfo, currentTournament, lastRegisteredPlayer, allRegistrations }) => {
+  const handleSearch = () => {
+    hook.searchPlayer(hook.searchAccount);
   };
 
   const handleCardSwipe = (cardNumber) => {
-    hook.searchPlayer(cardNumber);
+    hook.setSearchAccount(cardNumber);
+    setTimeout(() => hook.searchPlayer(cardNumber), 100);
+  };
+
+  const handleSearchChange = (value) => {
+    hook.setSearchAccount(value);
   };
 
   const getAvailableTimeSlots = () => {
-    return Array.from({ length: currentRoundInfo.timeSlots }, (_, i) => i + 1);
+    const timeSlotNames = {
+      'round1': [
+        '9:00 AM',
+        '9:45 AM', 
+        '10:30 AM',
+        '11:15 AM',
+        '12:00 PM',
+        '12:45 PM'
+      ],
+      'rebuy1': [
+        '1:30 PM',
+        '2:15 PM'
+      ],
+      'rebuy2': [
+        '3:00 PM'
+      ],
+      'round2': [
+        '9:00 AM',
+        '9:45 AM',
+        '10:30 AM'
+      ],
+      'superrebuy': [
+        '11:15 AM',
+        '12:00 PM'
+      ],
+      'quarterfinals': [
+        '12:45 PM',
+        '1:30 PM'
+      ],
+      'semifinals': [
+        '2:30 PM'
+      ]
+    };
+
+    const slots = timeSlotNames[currentRound] || [];
+    return slots.map((name, index) => ({ value: index + 1, name }));
   };
 
   const getButtonText = () => {
@@ -29,19 +71,81 @@ const RoundRegistrationForm = ({ hook, currentRound, currentRoundInfo, currentTo
     return `Register for ${currentRoundInfo.name}`;
   };
 
+  // Create lastPlayer object for LastPlayerCard - hide when search result is shown
+  const createLastPlayerData = () => {
+    // Hide LastPlayerCard when there's a current player or new player form showing
+    if (hook.currentPlayer || hook.showNewPlayerForm) return null;
+    
+    if (!lastRegisteredPlayer || lastRegisteredPlayer.round !== currentRound) return null;
+    
+    // Find all registrations for this player in this round
+    const playerRegistrations = allRegistrations?.filter(r => 
+      r.playerAccountNumber === lastRegisteredPlayer.playerAccountNumber && 
+      r.round === lastRegisteredPlayer.round
+    ) || [];
+    
+    const mainRegistration = playerRegistrations.find(r => !r.isMulligan);
+    const mulliganRegistration = playerRegistrations.find(r => r.isMulligan);
+    
+    // Build purchases string
+    let purchases = '';
+    if (mainRegistration) {
+      if (mainRegistration.paymentType === 'Comp' || mainRegistration.paymentAmount === 0) {
+        purchases = `COMP ${currentRoundInfo.name}`;
+      } else {
+        purchases = `${currentRoundInfo.name} ${mainRegistration.paymentAmount}`;
+      }
+    } else {
+      purchases = `Registered for ${currentRoundInfo.name}`;
+    }
+    
+    if (mulliganRegistration) {
+      purchases += ` + Mulligan ${mulliganRegistration.paymentAmount}`;
+    }
+
+    // Get the actual time name for the time slot
+    const timeSlots = getAvailableTimeSlots();
+    const timeSlotName = timeSlots.find(slot => slot.value === lastRegisteredPlayer.timeSlot)?.name || `Slot ${lastRegisteredPlayer.timeSlot}`;
+    
+    return {
+      name: `${lastRegisteredPlayer.firstName} ${lastRegisteredPlayer.lastName}`,
+      playerAccountNumber: lastRegisteredPlayer.playerAccountNumber,
+      roundContext: `${currentRoundInfo.name} - ${timeSlotName}`,
+      purchases: purchases,
+      seatingInfo: null // No seating info
+    };
+  };
+
   return (
-    <div>
+    <div style={{ minHeight: '500px' }}>
+      {/* Round Title Header */}
+      <h2 style={{ 
+        margin: '0 0 24px 0', 
+        fontSize: '1.6rem', 
+        fontWeight: 'bold',
+        color: '#000000',
+        fontFamily: 'Figtree, sans-serif'
+      }}>
+        {currentRoundInfo.name}
+      </h2>
+
       <SearchBar
-        searchValue="" // Always start fresh per round
-        onSearchChange={() => {}} // Handled internally by search
-        onSearch={() => handleSearch(document.querySelector('.input-field').value)}
+        searchValue={hook.searchAccount}
+        onSearchChange={handleSearchChange}
+        onSearch={handleSearch}
         onCardSwipe={handleCardSwipe}
         placeholder="Enter 14-digit Player Account Number"
       />
 
+      {/* LastPlayerCard under the search bar */}
+      <LastPlayerCard 
+        lastPlayer={createLastPlayerData()} 
+        showSeatingInfo={true} 
+      />
+
       {hook.showNewPlayerForm && currentRound === 'round1' && (
         <NewPlayerForm
-          accountNumber={document.querySelector('.input-field')?.value || ''}
+          accountNumber={hook.searchAccount}
           currentTournament={currentTournament}
           onSave={hook.handleNewPlayerSave}
           onCancel={hook.clearForm}
@@ -61,7 +165,7 @@ const RoundRegistrationForm = ({ hook, currentRound, currentRoundInfo, currentTo
             selectedRound={currentRound} 
           />
 
-          {/* Time Slot Selection - Now part of player info */}
+          {/* Time Slot Selection - Now shows actual times */}
           <div className="card" style={{ marginBottom: '16px' }}>
             <h4 style={{ margin: '0 0 16px 0', fontSize: '1.1rem' }}>
               Time Slot for {currentRoundInfo.name}
@@ -72,12 +176,12 @@ const RoundRegistrationForm = ({ hook, currentRound, currentRoundInfo, currentTo
                 value={hook.selectedTimeSlot}
                 onChange={(e) => hook.setSelectedTimeSlot(e.target.value)}
                 className="select-field"
-                style={{ maxWidth: '200px' }}
+                style={{ maxWidth: '300px' }}
               >
                 <option value="">-- Select Time Slot --</option>
                 {getAvailableTimeSlots().map(slot => (
-                  <option key={slot} value={slot}>
-                    Time Slot {slot}
+                  <option key={slot.value} value={slot.value}>
+                    {slot.name}
                   </option>
                 ))}
               </select>

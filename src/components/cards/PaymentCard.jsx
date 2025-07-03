@@ -45,10 +45,10 @@ const PaymentCard = ({
   };
 
   return (
-    <div className="card" style={{ marginBottom: '16px' }}>
+    <div className="card payment-card">
       <h4 style={{ margin: '0 0 16px 0', fontSize: '1.1rem' }}>{getPaymentTitle()}</h4>
       
-      <div style={{ display: 'flex', gap: '16px', marginBottom: '16px' }}>
+      <div className="payment-fields-row">
         <div style={{ flex: 1 }}>
           <div className="form-group">
             <label className="mb-2">Payment Type</label>
@@ -80,7 +80,7 @@ const PaymentCard = ({
         </div>
       </div>
 
-      <div className="form-group">
+      <div className="form-group split-payment-checkbox">
         <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
           <input
             type="checkbox"
@@ -93,7 +93,7 @@ const PaymentCard = ({
       </div>
 
       {splitPayment && paymentType !== 'Comp' && (
-        <div style={{ display: 'flex', gap: '16px' }}>
+        <div className="split-payment-fields">
           <div style={{ flex: 1 }}>
             <div className="form-group">
               <label className="mb-2">Second Payment Type</label>

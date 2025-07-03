@@ -47,32 +47,39 @@ const ManageTournamentsPage = () => {
           </p>
 
           {tournaments.map((tournament) => (
-            <div key={tournament.id} className="card" style={{ /* ... */ }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div style={{ flex: 1 }}>
-                  <p className="tournament-name">
+            <div key={tournament.id} className="tournament-card">
+              <div className="tournament-card-content">
+                <div className="tournament-info">
+                  <p className="tournament-name" style={{ marginBottom: '8px' }}>
                     {tournament.name}
                     {selectedEvent === tournament.name && (
-                      <span style={{ color: '#8b0000', fontSize: '0.85rem', fontWeight: '600', marginLeft: '8px' }}>
+                      <span className="tournament-active-badge">
                         (Currently Active)
                       </span>
                     )}
                   </p>
-                  <p className="tournament-metadata">
+                  <p className="tournament-metadata" style={{ marginBottom: '6px' }}>
                     Entry: ${tournament.entryCost} • Rebuy: ${tournament.rebuyCost} • Mulligan: ${tournament.mulliganCost}
                   </p>
                   {tournament.createdAt && (
-                    <p className="tournament-metadata">
+                    <p className="tournament-metadata" style={{ marginBottom: '0' }}>
                       Created: {new Date(tournament.createdAt).toLocaleDateString()}
                     </p>
                   )}
                 </div>
 
-                <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                  <button onClick={() => handleManageClick(tournament)} className="btn btn-secondary" style={{ fontSize: '0.9rem' }}>
+                <div className="tournament-actions">
+                  <button 
+                    onClick={() => handleManageClick(tournament)} 
+                    className="btn btn-secondary tournament-manage-btn"
+                  >
                     Manage Seating
                   </button>
-                  <button onClick={() => handleDeleteTournament(tournament)} className="btn" disabled={selectedEvent === tournament.name} style={{ /* ... */ }}>
+                  <button 
+                    onClick={() => handleDeleteTournament(tournament)} 
+                    className={`btn btn-danger tournament-delete-btn ${selectedEvent === tournament.name ? 'btn-disabled' : ''}`}
+                    disabled={selectedEvent === tournament.name}
+                  >
                     Delete
                   </button>
                 </div>

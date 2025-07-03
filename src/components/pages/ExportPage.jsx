@@ -20,6 +20,10 @@ const ExportPage = () => {
     { key: 'semifinals', name: 'Semifinals' }
   ];
   
+  const handleBackToRegistration = () => {
+    navigate('/register');
+  };
+
   const normalizePlayerData = (playerData) => {
     if (!playerData) return {};
     return {
@@ -31,6 +35,28 @@ const ExportPage = () => {
     };
   };
 
+  // Function to deduplicate registrations and keep only the most recent per player/round/type
+  const deduplicateRegistrations = (regs) => {
+    const grouped = {};
+    
+    regs.forEach(reg => {
+      // Create a key that groups by player, round, and whether it's a mulligan
+      const key = `${reg.playerAccountNumber}-${reg.round}-${reg.isMulligan ? 'mulligan' : 'main'}`;
+      
+      if (!grouped[key]) {
+        grouped[key] = reg;
+      } else {
+        // Keep the one with the most recent registration date
+        const existingDate = new Date(grouped[key].registrationDate);
+        const newDate = new Date(reg.registrationDate);
+        if (newDate > existingDate) {
+          grouped[key] = reg;
+        }
+      }
+    });
+    
+    return Object.values(grouped);
+  };
 
   const exportData = () => {
     if (!selectedExportRound) {
@@ -43,31 +69,30 @@ const ExportPage = () => {
     let filename = '';
 
     if (exportType === 'registrations') {
-      dataToExport = registrations
-        .filter((r) => r.round === roundKey)
-        .map((r) => ({
-          PlayerAccountNumber: r.playerAccountNumber,
-          FirstName: r.firstName,
-          LastName: r.lastName,
-          EventName: r.eventName,
-          EventType: r.eventType,
-          PaymentType: r.paymentType,
-          PaymentAmount: r.paymentAmount,
-          PaymentType2: r.paymentType2,
-          PaymentAmount2: r.paymentAmount2,
-          RegistrationDate: r.registrationDate,
-          Host: r.host,
-          Comment: r.comment,
-          Employee: r.employee,
-          Round: r.round,
-          TimeSlot: r.timeSlot,
-          TableNumber: r.tableNumber,
-          SeatNumber: r.seatNumber
-        }));
+      // Deduplicate registrations before export
+      const roundRegistrations = registrations.filter((r) => r.round === roundKey);
+      const deduplicatedRegistrations = deduplicateRegistrations(roundRegistrations);
+      
+      dataToExport = deduplicatedRegistrations.map((r) => ({
+        PlayerAccountNumber: r.playerAccountNumber,
+        FirstName: r.firstName,
+        LastName: r.lastName,
+        EventName: r.eventName,
+        EventType: r.eventType,
+        PaymentType: r.paymentType,
+        PaymentAmount: r.paymentAmount,
+        PaymentType2: r.paymentType2,
+        PaymentAmount2: r.paymentAmount2,
+        RegistrationDate: r.registrationDate,
+        Host: r.host,
+        Comment: r.comment,
+        Employee: r.employee,
+        Round: r.round,
+        TimeSlot: r.timeSlot
+      }));
 
       filename = `${selectedEvent}_${roundKey}_Registrations_${new Date().toISOString().split('T')[0]}.csv`;
     } else {
-      const roundRegistrations = registrations.filter((r) => r.round === roundKey);
       const combinedData = [];
       
       if (roundKey === 'round1') {
@@ -84,12 +109,17 @@ const ExportPage = () => {
             UploadedDate: new Date().toISOString(),
             Host: normalizedPlayer.host,
             Employee: employee,
-            Round: null, TimeSlot: null, TableNumber: null, SeatNumber: null
+            Round: null, 
+            TimeSlot: null
           };
         }));
       }
 
-      combinedData.push(...roundRegistrations.map((reg) => ({
+      // Deduplicate registrations before adding to combined data
+      const roundRegistrations = registrations.filter((r) => r.round === roundKey);
+      const deduplicatedRegistrations = deduplicateRegistrations(roundRegistrations);
+      
+      combinedData.push(...deduplicatedRegistrations.map((reg) => ({
         PlayerAccountNumber: reg.playerAccountNumber,
         FirstName: reg.firstName,
         LastName: reg.lastName,
@@ -104,9 +134,7 @@ const ExportPage = () => {
         Comment: reg.comment,
         Employee: reg.employee,
         Round: reg.round,
-        TimeSlot: reg.timeSlot,
-        TableNumber: reg.tableNumber,
-        SeatNumber: reg.seatNumber
+        TimeSlot: reg.timeSlot
       })));
 
       dataToExport = combinedData;
@@ -126,7 +154,7 @@ const ExportPage = () => {
 
   return (
     <div className="container">
-      <button onClick={() => navigate('/register')} className="link-back link-back-block">
+      <button onClick={handleBackToRegistration} className="link-back link-back-block">
         {'<'} Back to Registration
       </button>
 

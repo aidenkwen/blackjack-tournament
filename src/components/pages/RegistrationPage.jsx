@@ -1,176 +1,180 @@
-import React, { useMemo, useEffect } from 'react';
-import { useRegistration } from '../../hooks/useRegistration';
-import RegistrationForm from '../forms/RegistrationForm';
-import LastPlayerCard from '../cards/LastPlayerCard';
+import React, { useMemo, useState, useEffect } from 'react';
+import { useRoundRegistration } from '../../hooks/useRoundRegistration';
+import RoundRegistrationForm from '../forms/RoundRegistrationForm';
 import { useTournamentContext } from '../../context/TournamentContext';
 import { useNavigate } from 'react-router-dom';
 
 const RegistrationPage = () => {
   const navigate = useNavigate();
   const context = useTournamentContext();
-  const { 
-    lastActiveTab, setLastActiveTab, 
-    lastSelectedRound, setLastSelectedRound, 
-    lastSelectedTimeSlot, setLastSelectedTimeSlot 
-  } = context;
+  const [activeRound, setActiveRound] = useState('round1');
 
   const currentTournament = useMemo(() => 
     context.tournaments.find(t => t.name === context.selectedEvent) || { entryCost: 500, rebuyCost: 500, mulliganCost: 100 },
     [context.tournaments, context.selectedEvent]
   );
-  
-  const registrationHook = useRegistration({
-    initialTournament: currentTournament,
+
+  const rounds = [
+    { key: 'round1', name: 'Round 1', isRebuy: false, timeSlots: 6, cost: currentTournament.entryCost },
+    { key: 'rebuy1', name: 'Rebuy 1', isRebuy: true, timeSlots: 2, cost: currentTournament.rebuyCost },
+    { key: 'rebuy2', name: 'Rebuy 2', isRebuy: true, timeSlots: 1, cost: currentTournament.rebuyCost },
+    { key: 'round2', name: 'Round 2', isRebuy: false, timeSlots: 3, cost: currentTournament.entryCost },
+    { key: 'superrebuy', name: 'Super Rebuy', isRebuy: true, timeSlots: 2, cost: currentTournament.rebuyCost },
+    { key: 'quarterfinals', name: 'Quarterfinals', isRebuy: false, timeSlots: 2, cost: currentTournament.entryCost },
+    { key: 'semifinals', name: 'Semifinals', isRebuy: false, timeSlots: 1, cost: currentTournament.entryCost }
+  ];
+
+  const uniqueRound1Count = useMemo(() => {
+    const round1Registrations = context.registrations.filter(
+      r => r.eventName === context.selectedEvent && r.round === 'round1' && !r.isMulligan
+    );
+    const uniquePlayerAccounts = new Set(
+      round1Registrations.map(r => r.playerAccountNumber)
+    );
+    return uniquePlayerAccounts.size;
+  }, [context.registrations, context.selectedEvent]);
+
+  const currentRoundInfo = rounds.find(r => r.key === activeRound);
+
+  const registrationHook = useRoundRegistration({
+    currentTournament,
     allRegistrations: context.registrations,
     setRegistrations: context.setRegistrations,
     selectedEvent: context.selectedEvent,
     masterData: context.masterData,
     setMasterData: context.setMasterData,
     employee: context.employee,
-    activeTab: lastActiveTab,
-    selectedRound: lastSelectedRound,
-    selectedTimeSlot: lastSelectedTimeSlot,
+    currentRound: activeRound,
+    currentRoundInfo,
     pendingRegistration: context.pendingRegistration,
     setPendingRegistration: context.setPendingRegistration,
-    setCurrentPage: (page) => navigate(page === 2 ? '/seating' : '/'),
     setLastRegisteredPlayer: context.setLastRegisteredPlayer,
+    onSeatingNeeded: () => navigate('/seating'),
+    lastRoundPreferences: context.lastRoundPreferences || {},
+    setLastRoundPreferences: context.setLastRoundPreferences || (() => {}),
+    saveSearchState: () => {},
+    restoreSearchState: () => ({})
   });
 
-  const { clearForm } = registrationHook;
   useEffect(() => {
-    clearForm();
-  }, [lastActiveTab, lastSelectedRound, lastSelectedTimeSlot, clearForm]);
-
-  const { rounds } = registrationHook;
-
-  const getAvailableTimeSlots = () => {
-    if (lastActiveTab === 'registration') return Array.from({ length: 6 }, (_, i) => i + 1);
-    if (lastSelectedRound) {
-      const round = rounds.find(r => r.key === lastSelectedRound);
-      return Array.from({ length: round?.timeSlots || 1 }, (_, i) => i + 1);
+    if (context.lastSelectedRound && context.lastSelectedRound !== activeRound) {
+      setActiveRound(context.lastSelectedRound);
     }
-    return [];
-  };
+  }, [context.lastSelectedRound, activeRound]);
 
-  const handleTabClick = (tab) => {
-    setLastActiveTab(tab);
-    if (tab === 'registration') {
-      setLastSelectedRound('round1');
-      setLastSelectedTimeSlot(1);
-    } else {
-      setLastSelectedRound('');
-      setLastSelectedTimeSlot('');
+  const handleRoundChange = (newRound) => {
+    if (newRound !== activeRound) {
+      if (context.setLastSelectedRound) {
+        context.setLastSelectedRound(newRound);
+      }
+      
+      if (registrationHook.clearForm) {
+        registrationHook.clearForm();
+      }
+      
+      setActiveRound(newRound);
     }
   };
 
-  const showSearchBar = (lastActiveTab === 'registration' && lastSelectedTimeSlot) || (lastActiveTab === 'post-registration' && lastSelectedRound && lastSelectedTimeSlot);
-  
-  const lastPlayer = useMemo(() => {
-    const fmtTypes = (t1, t2) => (t2 ? `${t1}+${t2}` : t1);
-    const tournamentRegistrations = context.registrations.filter(r => r.eventName === context.selectedEvent);
-    let contextRegistrations = [];
-    let roundContext = '';
-
-    if (lastActiveTab === 'registration') {
-      contextRegistrations = tournamentRegistrations.filter(r => r.round === 'round1');
-      roundContext = 'Round 1';
-    } else if (lastSelectedRound) {
-      contextRegistrations = tournamentRegistrations.filter(r => r.round === lastSelectedRound);
-      const roundInfo = rounds.find(r => r.key === lastSelectedRound);
-      roundContext = roundInfo ? roundInfo.name : lastSelectedRound;
+  const handleNavigateWithContext = (path) => {
+    if (context.setLastSelectedRound) {
+      context.setLastSelectedRound(activeRound);
     }
-    if (contextRegistrations.length === 0) return null;
-    const lastReg = [...contextRegistrations].sort((a, b) => new Date(b.registrationDate) - new Date(a.registrationDate))[0];
-    if (!lastReg) return null;
-    const playerTransactions = contextRegistrations.filter(r => r.playerAccountNumber === lastReg.playerAccountNumber && r.round === lastReg.round);
-    const purchases = [];
-    playerTransactions.forEach(t => {
-      let purchaseDesc = '';
-      if (t.isRebuy) purchaseDesc = `Rebuy (${fmtTypes(t.paymentType, t.paymentType2)})`;
-      else if (t.isMulligan) purchaseDesc = `Mulligan (${fmtTypes(t.paymentType, t.paymentType2)})`;
-      else if (t.eventType === 'CHECK-IN') purchaseDesc = 'Check-In';
-      else if (t.paymentType === 'Comp') purchaseDesc = 'Registration (Comp)';
-      else purchaseDesc = `Registration (${fmtTypes(t.paymentType, t.paymentType2)})`;
-      if (purchaseDesc) purchases.push(purchaseDesc);
-    });
-    let seatingInfo = null;
-    if (lastReg.tableNumber && lastReg.seatNumber) seatingInfo = `Seated: Table ${lastReg.tableNumber}, Seat ${lastReg.seatNumber}`;
-    return {
-      playerAccountNumber: lastReg.playerAccountNumber,
-      name: `${lastReg.firstName} ${lastReg.lastName}`,
-      purchases: purchases.length > 0 ? [...new Set(purchases)].join(', ') : 'Registration',
-      roundContext,
-      seatingInfo
-    };
-  }, [context.registrations, context.selectedEvent, lastActiveTab, lastSelectedRound, rounds]);
+    navigate(path);
+  };
+
+  const handleNavigateToEventSelection = () => {
+    if (registrationHook.clearForm) {
+      registrationHook.clearForm();
+    }
+    
+    if (context.setLastSelectedRound) {
+      context.setLastSelectedRound('round1');
+    }
+    if (context.setLastRoundPreferences) {
+      context.setLastRoundPreferences({});
+    }
+    if (context.setPendingRegistration) {
+      context.setPendingRegistration(null);
+    }
+    if (context.setLastRegisteredPlayer) {
+      context.setLastRegisteredPlayer(null);
+    }
+    
+    navigate('/');
+  };
 
   return (
     <div className="container">
-      <button onClick={() => navigate('/')} className="link-back link-back-block">
+      <button 
+        onClick={handleNavigateToEventSelection} 
+        className="link-back link-back-block"
+      >
         {'<'} Back to Event Selection
       </button>
       
       <div className="page-header">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', width: '100%' }}>
           <div>
-            <h1 className="page-title">{context.selectedEvent}</h1>
+            <h1 className="page-title">{context.selectedEvent || 'No Event Selected'}</h1>
             <p className="page-subtitle">
-              {context.registrations.filter(r => r.eventName === context.selectedEvent && r.round === 'round1' && !r.isMulligan).length} total registrations, Employee: {context.employee}
+              {uniqueRound1Count} total registration{uniqueRound1Count !== 1 ? 's' : ''}, Employee: {context.employee || 'No Employee'}
             </p>
           </div>
           <div style={{ display: 'flex', gap: '12px' }}>
-            <button onClick={() => navigate('/tabling')} className="btn btn-white-red">Manage Tournament</button>
-            <button onClick={() => navigate('/export')} className="btn btn-primary">Export Data</button>
+            <button 
+              onClick={() => handleNavigateWithContext('/tabling')} 
+              className="btn btn-white-red"
+            >
+              Manage Tournament
+            </button>
+            <button 
+              onClick={() => handleNavigateWithContext('/export')} 
+              className="btn btn-primary"
+            >
+              Export Data
+            </button>
           </div>
         </div>
       </div>
-      
-      <div className="tabs">
-        <div className={`tab ${lastActiveTab === 'registration' ? 'active' : ''}`} onClick={() => handleTabClick('registration')}>Registration</div>
-        <div className={`tab ${lastActiveTab === 'post-registration' ? 'active' : ''}`} onClick={() => handleTabClick('post-registration')}>Post-Registration</div>
-      </div>
-      
-      <div style={{ display: 'flex', gap: '16px', marginBottom: '8px' }}>
-        <div className="form-group" style={{ flex: 1 }}>
-          <label className="mb-2">Round</label>
-          {lastActiveTab === 'registration' ? (
-            <select value="round1" disabled className="select-field" style={{ backgroundColor: '#f5f5f5', color: '#666' }}>
-              <option value="round1">Round 1</option>
-            </select>
-          ) : (
-            <select value={lastSelectedRound} onChange={(e) => setLastSelectedRound(e.target.value)} className="select-field">
-              <option value="">-- Select Round --</option>
-              {rounds.map((round) => (<option key={round.key} value={round.key}>{round.name}</option>))}
-            </select>
-          )}
+
+      <div style={{ display: 'flex', gap: '24px', marginTop: '24px' }}>
+        {/* Vertical Round Tabs */}
+        <div className="vertical-tabs-container" style={{ 
+          width: '200px', // Fixed width instead of minWidth
+          flexShrink: 0, // Prevents shrinking
+          flexGrow: 0 // Prevents growing
+        }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
+            {rounds.map((round) => (
+              <button
+                key={round.key}
+                onClick={() => handleRoundChange(round.key)}
+                className={`vertical-tab ${activeRound === round.key ? 'active' : ''}`}
+              >
+                {round.name}
+              </button>
+            ))}
+          </div>
         </div>
-        <div className="form-group" style={{ flex: 1 }}>
-          <label className="mb-2">Time Slot</label>
-          <select value={lastSelectedTimeSlot} onChange={(e) => setLastSelectedTimeSlot(e.target.value)} className="select-field">
-            <option value="">-- Select Slot --</option>
-            {getAvailableTimeSlots().map(slot => (<option key={slot} value={slot}>Slot {slot}</option>))}
-          </select>
-        </div>
-      </div>
-      
-      {showSearchBar ? (
-        <>
-          <RegistrationForm
+
+        {/* Round Registration Form */}
+        <div style={{ 
+          flex: 1,
+          minWidth: 0,
+          maxWidth: 'calc(100% - 224px)', // Container width minus sidebar and gap
+          overflow: 'hidden'
+        }}>
+          <RoundRegistrationForm
             hook={registrationHook}
-            activeTab={lastActiveTab}
-            selectedRound={lastSelectedRound}
+            currentRound={activeRound}
+            currentRoundInfo={currentRoundInfo}
             currentTournament={currentTournament}
+            lastRegisteredPlayer={context.lastRegisteredPlayer}
+            allRegistrations={context.registrations}
           />
-          {/* FIX: Conditionally render the LastPlayerCard */}
-          {lastPlayer && !registrationHook.currentPlayer && (
-            <LastPlayerCard lastPlayer={lastPlayer} showSeatingInfo={true} />
-          )}
-        </>
-      ) : (
-        <p className="subheading" style={{ textAlign: 'center' }}>
-          {lastActiveTab === 'registration' ? 'Please select a time slot to begin.' : 'Please select a round and time slot to begin.'}
-        </p>
-      )}
+        </div>
+      </div>
     </div>
   );
 };

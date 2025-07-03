@@ -1,3 +1,4 @@
+// Updated TablingOverview with actual times
 import React, { useState, useEffect, useCallback } from 'react';
 
 const TablingOverview = ({ 
@@ -15,6 +16,22 @@ const TablingOverview = ({
     { key: 'quarterfinals', name: 'Quarterfinals', timeSlots: 2 },
     { key: 'semifinals', name: 'Semifinals', timeSlots: 1 }
   ];
+
+  // Time slot utility function
+  const getTimeSlotName = (round, slotNumber) => {
+    const timeSlotNames = {
+      'round1': ['9:00 AM', '9:45 AM', '10:30 AM', '11:15 AM', '12:00 PM', '12:45 PM'],
+      'rebuy1': ['1:30 PM', '2:15 PM'],
+      'rebuy2': ['3:00 PM'],
+      'round2': ['9:00 AM', '9:45 AM', '10:30 AM'],
+      'superrebuy': ['11:15 AM', '12:00 PM'],
+      'quarterfinals': ['12:45 PM', '1:30 PM'],
+      'semifinals': ['2:30 PM']
+    };
+    
+    const slots = timeSlotNames[round] || [];
+    return slots[slotNumber - 1] || `Slot ${slotNumber}`;
+  };
 
   const getMostRecentRound = useCallback(() => {
     if (!registrations || registrations.length === 0) return 'round1';
@@ -89,7 +106,7 @@ const TablingOverview = ({
           >
             {availableTimeSlots.map(slot => (
               <option key={slot} value={slot}>
-                Slot {slot}
+                {getTimeSlotName(selectedRound, slot)}
               </option>
             ))}
           </select>

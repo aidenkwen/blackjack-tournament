@@ -4,7 +4,7 @@ const LastPlayerCard = ({ lastPlayer, showSeatingInfo = false }) => {
   if (!lastPlayer) return null;
 
   return (
-    <div className="card last-added">
+    <div className="card last-added" style={{ marginBottom: '16px' }}>
       <h3 className="card-title">Last Added ({lastPlayer.roundContext})</h3>
       <div className="card-content">
         <p className="last-added-line player-name-with-account compact">

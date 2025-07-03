@@ -1,7 +1,7 @@
 import React from 'react';
 import './Blackjack.css';
-import { Routes, Route } from 'react-router-dom'; // Import routing components
-import { useTournamentContext } from './context/TournamentContext'; // Import our hook
+import { Routes, Route } from 'react-router-dom';
+import { useTournamentContext } from './context/TournamentContext';
 
 // Import Page Components
 import EventSelectionPage from './components/pages/EventSelectionPage';
@@ -13,26 +13,112 @@ import TablingManagement from './components/pages/TablingManagement';
 import ExportPage from './components/pages/ExportPage';
 import { Toaster } from 'react-hot-toast';
 
+// FIXED: Add Error Boundary component
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null, errorInfo: null };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    console.error('App Error:', error, errorInfo);
+    this.setState({ errorInfo });
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="container">
+          <div className="alert alert-error" style={{ marginTop: '40px' }}>
+            <h3>Something went wrong</h3>
+            <p>{this.state.error?.message || 'An unexpected error occurred'}</p>
+            <details style={{ marginTop: '16px', fontSize: '0.9rem', color: '#666' }}>
+              <summary style={{ cursor: 'pointer', marginBottom: '8px' }}>Error Details</summary>
+              <pre style={{ 
+                backgroundColor: '#f5f5f5', 
+                padding: '12px', 
+                borderRadius: '4px', 
+                overflow: 'auto',
+                maxHeight: '200px'
+              }}>
+                {this.state.error?.stack || 'No stack trace available'}
+              </pre>
+            </details>
+            <div style={{ marginTop: '16px', display: 'flex', gap: '12px' }}>
+              <button 
+                onClick={() => this.setState({ hasError: false, error: null, errorInfo: null })}
+                className="btn btn-primary"
+              >
+                Try Again
+              </button>
+              <button 
+                onClick={() => window.location.reload()}
+                className="btn btn-secondary"
+              >
+                Reload Page
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
 const App = () => {
   // Get only what's needed for error checking from the context
   const { tournamentsError, playersError, registrationsError } = useTournamentContext();
 
-  // Error boundary remains the same
-  if (tournamentsError || playersError || registrationsError) {
+  // FIXED: Better error handling with more detailed error messages
+  const hasApiError = tournamentsError || playersError || registrationsError;
+  const errorMessage = tournamentsError || playersError || registrationsError;
+
+  if (hasApiError) {
     return (
       <div className="container">
-        <div className="alert alert-error">
-          <h3>Database Connection Error</h3>
-          <p>{tournamentsError || playersError || registrationsError}</p>
-          <p>Make sure your API server is running on http://localhost:3001</p>
-          <button onClick={() => window.location.reload()} className="btn btn-primary">Retry Connection</button>
+        <div className="alert alert-error" style={{ marginTop: '40px' }}>
+          <h3>Storage Error</h3>
+          <p>{errorMessage}</p>
+          <p>This might be due to:</p>
+          <ul style={{ textAlign: 'left', marginTop: '8px' }}>
+            <li>Browser storage being full</li>
+            <li>Private browsing mode restrictions</li>
+            <li>Browser security settings</li>
+          </ul>
+          <div style={{ marginTop: '16px', display: 'flex', gap: '12px' }}>
+            <button 
+              onClick={() => {
+                try {
+                  localStorage.clear();
+                  window.location.reload();
+                } catch (e) {
+                  alert('Unable to clear storage. Please try refreshing the page.');
+                }
+              }} 
+              className="btn btn-primary"
+            >
+              Clear Storage & Reload
+            </button>
+            <button 
+              onClick={() => window.location.reload()} 
+              className="btn btn-secondary"
+            >
+              Retry
+            </button>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <>
+    <ErrorBoundary>
       <Toaster 
         position="top-center"
         toastOptions={{
@@ -46,7 +132,6 @@ const App = () => {
         }}
       />
       
-      {/* The old currentPage logic is replaced with declarative routing */}
       <Routes>
         <Route path="/" element={<EventSelectionPage />} />
         <Route path="/add-tournament" element={<AddTournamentPage />} />
@@ -56,7 +141,7 @@ const App = () => {
         <Route path="/tabling" element={<TablingManagement />} />
         <Route path="/export" element={<ExportPage />} />
       </Routes>
-    </>
+    </ErrorBoundary>
   );
 };
 
