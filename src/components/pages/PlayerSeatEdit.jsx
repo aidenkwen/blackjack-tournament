@@ -272,12 +272,20 @@ const PlayerSeatEdit = ({
     }
   };
 
-  // FIXED: Prevent closing modal if player needs reseating
+  // FIXED: Prevent closing modal if player needs reseating OR has pending changes
   const handleCloseModal = () => {
+    // Check if player needs reseating (time slot changed but no seat confirmed)
     if (playerNeedsReseating && !selectedSeatInModal) {
       toast.error('Please select a new seat before closing. The player currently has no seat assigned.');
       return;
     }
+    
+    // Check if player has selected a seat but hasn't confirmed it yet
+    if (selectedSeatInModal && playerNeedsReseating) {
+      toast.error('Please click "Confirm Seat" to save the seat assignment before closing.');
+      return;
+    }
+    
     setShowSeatingModal(false);
     setSelectedSeatInModal(null);
     setPlayerNeedsReseating(false);
@@ -289,10 +297,19 @@ const PlayerSeatEdit = ({
       if (event.key === 'Escape' && showSeatingModal) {
         event.preventDefault();
         // Inline the close logic to avoid dependency issues
+        
+        // Check if player needs reseating (time slot changed but no seat confirmed)
         if (playerNeedsReseating && !selectedSeatInModal) {
           toast.error('Please select a new seat before closing. The player currently has no seat assigned.');
           return;
         }
+        
+        // Check if player has selected a seat but hasn't confirmed it yet
+        if (selectedSeatInModal && playerNeedsReseating) {
+          toast.error('Please click "Confirm Seat" to save the seat assignment before closing.');
+          return;
+        }
+        
         setShowSeatingModal(false);
         setSelectedSeatInModal(null);
         setPlayerNeedsReseating(false);
@@ -321,12 +338,18 @@ const PlayerSeatEdit = ({
             {/* FIXED: Show different close button styling when disabled */}
             <button 
               onClick={handleCloseModal} 
-              className={`btn-close ${playerNeedsReseating && !selectedSeatInModal ? 'btn-close-disabled' : ''}`}
+              className={`btn-close ${(playerNeedsReseating && !selectedSeatInModal) || (selectedSeatInModal && playerNeedsReseating) ? 'btn-close-disabled' : ''}`}
               style={{
-                opacity: playerNeedsReseating && !selectedSeatInModal ? 0.5 : 1,
-                cursor: playerNeedsReseating && !selectedSeatInModal ? 'not-allowed' : 'pointer'
+                opacity: (playerNeedsReseating && !selectedSeatInModal) || (selectedSeatInModal && playerNeedsReseating) ? 0.5 : 1,
+                cursor: (playerNeedsReseating && !selectedSeatInModal) || (selectedSeatInModal && playerNeedsReseating) ? 'not-allowed' : 'pointer'
               }}
-              title={playerNeedsReseating && !selectedSeatInModal ? 'Please select a seat before closing' : 'Close'}
+              title={
+                playerNeedsReseating && !selectedSeatInModal 
+                  ? 'Please select a seat before closing' 
+                  : selectedSeatInModal && playerNeedsReseating 
+                    ? 'Please confirm seat assignment before closing'
+                    : 'Close'
+              }
             >
               ×
             </button>
@@ -343,6 +366,20 @@ const PlayerSeatEdit = ({
               color: '#856404'
             }}>
               <strong>⚠️ Action Required:</strong> {selectedPlayerInModal?.firstName} needs a new seat assignment. Please select a seat before closing this window.
+            </div>
+          )}
+          
+          {/* FIXED: Show different warning when seat is selected but not confirmed */}
+          {selectedSeatInModal && playerNeedsReseating && (
+            <div style={{ 
+              marginBottom: '16px', 
+              padding: '12px', 
+              backgroundColor: '#d1ecf1', 
+              border: '1px solid #bee5eb', 
+              borderRadius: '4px',
+              color: '#0c5460'
+            }}>
+              <strong>📍 Confirmation Required:</strong> You've selected Table {selectedSeatInModal.table}, Seat {selectedSeatInModal.seat} for {selectedPlayerInModal?.firstName}. Click "Confirm Seat" to save this assignment.
             </div>
           )}
           
