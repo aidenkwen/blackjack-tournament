@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { UC } from '../../utils/formatting';
 import SearchBar from '../common/SearchBar';
 import NewPlayerForm from './NewPlayerForm';
@@ -6,89 +6,61 @@ import PaymentCard from '../cards/PaymentCard';
 import MulliganCard from '../cards/MulliganCard';
 import PlayerInfoCard from '../cards/PlayerInfoCard';
 
-const RoundRegistrationForm = ({ hook, currentRound, currentRoundInfo, currentTournament }) => {
-  const handleSearch = (searchAccount) => {
+const RegistrationForm = ({ hook, activeTab, selectedRound, currentTournament }) => {
+  const [searchAccount, setSearchAccount] = useState('');
+
+  // FIX: Connect the SearchBar to the hook's search function
+  const handleSearch = () => {
     hook.searchPlayer(searchAccount);
   };
 
   const handleCardSwipe = (cardNumber) => {
-    hook.searchPlayer(cardNumber);
+    setSearchAccount(cardNumber);
+    setTimeout(() => hook.searchPlayer(cardNumber), 100);
   };
-
-  const getAvailableTimeSlots = () => {
-    return Array.from({ length: currentRoundInfo.timeSlots }, (_, i) => i + 1);
-  };
-
+  
   const getButtonText = () => {
-    if (hook.addMulligan) {
-      return `Register for ${currentRoundInfo.name} & Add Mulligan`;
+    if (activeTab === 'registration') {
+      return hook.addMulligan ? 'Register Player & Add Mulligan' : 'Register Player';
     }
-    if (currentRoundInfo.isRebuy) {
-      return `Check In for ${currentRoundInfo.name}`;
-    }
-    return `Register for ${currentRoundInfo.name}`;
+    return hook.addMulligan ? 'Check In & Add Mulligan' : 'Check In';
   };
+  
+  const showPaymentCard = activeTab === 'registration' || (hook.rounds.find(r => r.key === selectedRound)?.isRebuy);
 
   return (
-    <div>
+    <>
       <SearchBar
-        searchValue="" // Always start fresh per round
-        onSearchChange={() => {}} // Handled internally by search
-        onSearch={() => handleSearch(document.querySelector('.input-field').value)}
+        searchValue={searchAccount}
+        onSearchChange={setSearchAccount}
+        onSearch={handleSearch}
         onCardSwipe={handleCardSwipe}
         placeholder="Enter 14-digit Player Account Number"
       />
 
-      {hook.showNewPlayerForm && currentRound === 'round1' && (
+      {hook.showNewPlayerForm && (
         <NewPlayerForm
-          accountNumber={document.querySelector('.input-field')?.value || ''}
+          accountNumber={searchAccount}
           currentTournament={currentTournament}
-          onSave={hook.handleNewPlayerSave}
+          // FIX: Pass the save/cancel handlers from the hook
+          onSave={hook.handleNewPlayerSave} 
           onCancel={hook.clearForm}
           host={hook.host}
           setHost={hook.setHost}
           comments={hook.comments}
           setComments={hook.setComments}
-          canRegisterForRound1={true}
+          canRegisterForRound1={activeTab === 'registration'}
         />
       )}
 
       {hook.currentPlayer && (
         <div>
-          <PlayerInfoCard 
-            currentPlayer={hook.currentPlayer} 
-            activeTab="registration" 
-            selectedRound={currentRound} 
-          />
-
-          {/* Time Slot Selection - Now part of player info */}
-          <div className="card" style={{ marginBottom: '16px' }}>
-            <h4 style={{ margin: '0 0 16px 0', fontSize: '1.1rem' }}>
-              Time Slot for {currentRoundInfo.name}
-            </h4>
-            <div className="form-group">
-              <label className="mb-2">Select Time Slot</label>
-              <select
-                value={hook.selectedTimeSlot}
-                onChange={(e) => hook.setSelectedTimeSlot(e.target.value)}
-                className="select-field"
-                style={{ maxWidth: '200px' }}
-              >
-                <option value="">-- Select Time Slot --</option>
-                {getAvailableTimeSlots().map(slot => (
-                  <option key={slot} value={slot}>
-                    Time Slot {slot}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          {/* Payment Card - Only show if payment is required */}
-          {(currentRound !== 'round1' || hook.currentPlayer.entryType !== 'COMP') && (
+          <PlayerInfoCard currentPlayer={hook.currentPlayer} activeTab={activeTab} selectedRound={selectedRound} />
+          
+          {showPaymentCard && (
             <PaymentCard
-              activeTab="registration"
-              selectedRound={currentRound}
+              activeTab={activeTab}
+              selectedRound={selectedRound}
               paymentType={hook.paymentType}
               setPaymentType={hook.setPaymentType}
               paymentAmount={hook.paymentAmount}
@@ -102,6 +74,7 @@ const RoundRegistrationForm = ({ hook, currentRound, currentRoundInfo, currentTo
               currentPlayer={hook.currentPlayer}
               currentTournament={currentTournament}
               getPaymentTypes={() => ['Cash', 'Credit', 'Chips', 'Comp']}
+              // FIX: Connect the payment card's handler to the hook's handler
               handlePaymentTypeChange={hook.handlePaymentTypeChange}
             />
           )}
@@ -121,43 +94,20 @@ const RoundRegistrationForm = ({ hook, currentRound, currentRoundInfo, currentTo
             setMulliganAmount2={hook.setMulliganAmount2}
             currentTournament={currentTournament}
           />
-
-          <div className="form-group">
-            <label className="mb-2">Host</label>
-            <input
-              type="text"
-              value={hook.host}
-              onChange={(e) => hook.setHost(UC(e.target.value))}
-              className="input-field"
-              placeholder="Enter host name"
-            />
-          </div>
-
+          
           <div className="form-group">
             <label className="mb-2">Comments</label>
-            <textarea
-              value={hook.comments}
-              onChange={(e) => hook.setComments(UC(e.target.value))}
-              className="textarea-field"
-              rows="3"
-            />
+            <textarea value={hook.comments} onChange={(e) => hook.setComments(UC(e.target.value))} className="textarea-field" rows="3"/>
           </div>
 
-          <button 
-            onClick={hook.handleRegistration} 
-            className="btn btn-success"
-            disabled={!hook.selectedTimeSlot}
-            style={{
-              opacity: !hook.selectedTimeSlot ? 0.5 : 1,
-              cursor: !hook.selectedTimeSlot ? 'not-allowed' : 'pointer'
-            }}
-          >
+          {/* FIX: Connect the main action button to the hook's registration handler */}
+          <button onClick={hook.handleRegistration} className="btn btn-success">
             {getButtonText()}
           </button>
         </div>
       )}
-    </div>
+    </>
   );
 };
 
-export default RoundRegistrationForm;
+export default RegistrationForm;
