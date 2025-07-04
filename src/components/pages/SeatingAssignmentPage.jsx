@@ -62,7 +62,26 @@ const SeatingAssignmentPage = () => {
   const currentPlayerTimeSlot = pendingRegistration.selectedTimeSlot;
   const currentPlayer = pendingRegistration.player;
   
-  const handleBack = () => navigate('/register');
+  const handleBack = () => {
+    const confirmed = window.confirm(
+      "Going back will cancel this player's registration. Are you sure?"
+    );
+    
+    if (confirmed) {
+      // Remove the player's registrations
+      setRegistrations(prevRegistrations => {
+        return prevRegistrations.filter(r => 
+          !(pendingRegistration.registrations.some(pr => pr.id === r.id))
+        );
+      });
+      
+      setPendingRegistration(null);
+      toast.success('Registration cancelled. Player removed from tournament.');
+      navigate('/register');
+    }
+    // If not confirmed, do nothing (stay on seating page)
+  };
+
   const currentRound = rounds.find(r => r.key === currentPlayerRound);
   const timeSlotName = getTimeSlotName(currentPlayerRound, currentPlayerTimeSlot);
   const getDisabledKey = (round, timeSlot, tableNumber) => `${selectedEvent}-${round}-${timeSlot}-${tableNumber}`;

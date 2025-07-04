@@ -5,7 +5,7 @@ import toast from 'react-hot-toast';
 
 const ManageTournamentsPage = () => {
   const navigate = useNavigate();
-  const { tournaments, deleteTournament, selectedEvent, setSelectedEvent } = useTournamentContext();
+  const { tournaments, deleteTournament, selectedEvent, setSelectedEvent, setGlobalDisabledTables } = useTournamentContext();
 
   const handleDeleteTournament = async (tournamentToDelete) => {
     if (selectedEvent === tournamentToDelete.name) {
@@ -18,6 +18,18 @@ const ManageTournamentsPage = () => {
     if (confirmDelete) {
       try {
         await deleteTournament(tournamentToDelete.id);
+        
+        // Clean up disabled tables for this tournament
+        setGlobalDisabledTables(prev => {
+          const updated = { ...prev };
+          Object.keys(updated).forEach(key => {
+            if (key.startsWith(`${tournamentToDelete.name}-`)) {
+              delete updated[key];
+            }
+          });
+          return updated;
+        });
+        
         toast.success(`Tournament "${tournamentToDelete.name}" deleted successfully.`);
       } catch (error) {
         toast.error(`Error deleting tournament: ${error.message}`);
