@@ -231,15 +231,17 @@ const ExportPage = () => {
         </select>
       </div>
 
-      <button
-        onClick={exportData}
-        disabled={!registrations || registrations.length === 0}
-        className={`btn btn-success ${
-          !registrations || registrations.length === 0 ? 'btn-disabled' : ''
-        }`}
-      >
-        Export Data
-      </button>
+      <div className="button-group">
+        <button
+          onClick={exportData}
+          disabled={!registrations || registrations.length === 0}
+          className={`btn btn-success ${
+            !registrations || registrations.length === 0 ? 'btn-disabled' : ''
+          }`}
+        >
+          Export Data
+        </button>
+      </div>
     </div>
   );
 };

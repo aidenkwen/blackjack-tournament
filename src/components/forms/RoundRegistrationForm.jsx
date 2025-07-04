@@ -94,15 +94,19 @@ const RoundRegistrationForm = ({ hook, currentRound, currentRoundInfo, currentTo
       if (mainRegistration.eventType === 'COMP') {
         purchases = `COMP ${currentRoundInfo.name}`;
       } else if (mainRegistration.eventType === 'PAY') {
-        // Show payment method and amount for PAY
+        // Show payment method and amount for PAY - handle split payments
         if (mainRegistration.paymentType && mainRegistration.paymentAmount > 0) {
-          purchases = `${currentRoundInfo.name} ${mainRegistration.paymentType} $${mainRegistration.paymentAmount}`;
+          purchases = `${currentRoundInfo.name} ${mainRegistration.paymentType} ${mainRegistration.paymentAmount}`;
+          // Add second payment if it exists
+          if (mainRegistration.paymentType2 && mainRegistration.paymentAmount2 > 0) {
+            purchases += `/${mainRegistration.paymentType2} ${mainRegistration.paymentAmount2}`;
+          }
         } else {
           purchases = `${currentRoundInfo.name}`;
         }
       } else {
         // Fallback
-        purchases = `${currentRoundInfo.name} $${mainRegistration.paymentAmount || 0}`;
+        purchases = `${currentRoundInfo.name} ${mainRegistration.paymentAmount || 0}`;
       }
     } else {
       purchases = `Registered for ${currentRoundInfo.name}`;
@@ -112,7 +116,11 @@ const RoundRegistrationForm = ({ hook, currentRound, currentRoundInfo, currentTo
       if (mulliganRegistration.paymentType === 'Comp') {
         purchases += ` + COMP Mulligan`;
       } else {
-        purchases += ` + Mulligan ${mulliganRegistration.paymentType || 'Cash'} $${mulliganRegistration.paymentAmount}`;
+        purchases += ` + Mulligan ${mulliganRegistration.paymentType || 'Cash'} ${mulliganRegistration.paymentAmount}`;
+        // Add second mulligan payment if it exists
+        if (mulliganRegistration.paymentType2 && mulliganRegistration.paymentAmount2 > 0) {
+          purchases += `/${mulliganRegistration.paymentType2} ${mulliganRegistration.paymentAmount2}`;
+        }
       }
     }
 
@@ -130,7 +138,7 @@ const RoundRegistrationForm = ({ hook, currentRound, currentRoundInfo, currentTo
   };
 
   return (
-    <div style={{ minHeight: '500px' }}>
+    <div style={{ minHeight: '500px', paddingTop: '24px' }}>
       {/* Round Title Header */}
       <h2 style={{ 
         margin: '0 0 24px 0', 

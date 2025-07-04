@@ -121,7 +121,7 @@ const RegistrationPage = () => {
               {uniqueRound1Count} total registration{uniqueRound1Count !== 1 ? 's' : ''}, Employee: {context.employee || 'No Employee'}
             </p>
           </div>
-          <div style={{ display: 'flex', gap: '12px' }}>
+          <div className="button-group">
             <button 
               onClick={() => handleNavigateWithContext('/tabling')} 
               className="btn btn-white-red"
@@ -138,7 +138,15 @@ const RegistrationPage = () => {
         </div>
       </div>
 
-      <div style={{ display: 'flex', gap: '24px', marginTop: '24px' }}>
+      {/* Horizontal separator line */}
+      <div style={{ 
+        width: '100%', 
+        height: '1px', 
+        backgroundColor: '#ddd', 
+        margin: '24px 0 0 0' 
+      }}></div>
+
+      <div style={{ display: 'flex', gap: '24px' }}>
         {/* Vertical Round Tabs */}
         <div className="vertical-tabs-container" style={{ 
           width: '200px', // Fixed width instead of minWidth

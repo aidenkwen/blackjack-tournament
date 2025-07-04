@@ -54,16 +54,6 @@ const PlayerSeatEdit = ({
     return globalDisabledTables[key] || false;
   };
 
-  const toggleTable = (tableNumber, round, timeSlot) => {
-    const hasPlayers = [1, 2, 3, 4, 5, 6].some(seat => getPlayerAtSeat(tableNumber, seat, round, timeSlot));
-    if (hasPlayers) {
-      toast.error('Cannot disable a table with players currently seated.');
-      return;
-    }
-    const key = getDisabledKey(round, timeSlot, tableNumber);
-    setGlobalDisabledTables(prev => ({ ...prev, [key]: !prev[key] }));
-  };
-
   const getFurthestRoundForPlayer = (playerAccountNumber) => {
     const playerRegs = registrations.filter(r => 
       r.playerAccountNumber === playerAccountNumber && !r.isMulligan
@@ -333,8 +323,8 @@ const PlayerSeatEdit = ({
     return (
       <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
         <div style={{ backgroundColor: 'white', padding: '24px', borderRadius: '8px', width: '90%', maxWidth: '1000px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-            <h3 style={{ margin: 0 }} className="round-info">{roundName} - Edit Seating</h3>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', paddingBottom: '12px', borderBottom: '1px solid #ddd' }}>
+            <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 'bold' }} className="round-info">{roundName} - Edit Seating</h3>
             {/* FIXED: Show different close button styling when disabled */}
             <button 
               onClick={handleCloseModal} 
@@ -360,10 +350,10 @@ const PlayerSeatEdit = ({
             <div style={{ 
               marginBottom: '16px', 
               padding: '12px', 
-              backgroundColor: '#fff3cd', 
-              border: '1px solid #ffeaa7', 
+              backgroundColor: '#f8d7da', 
+              border: '1px solid #f5c6cb', 
               borderRadius: '4px',
-              color: '#856404'
+              color: '#721c24'
             }}>
               <strong>⚠️ Action Required:</strong> {selectedPlayerInModal?.firstName} needs a new seat assignment. Please select a seat before closing this window.
             </div>
@@ -374,49 +364,45 @@ const PlayerSeatEdit = ({
             <div style={{ 
               marginBottom: '16px', 
               padding: '12px', 
-              backgroundColor: '#d1ecf1', 
-              border: '1px solid #bee5eb', 
+              backgroundColor: '#f8d7da', 
+              border: '1px solid #f5c6cb', 
               borderRadius: '4px',
-              color: '#0c5460'
+              color: '#721c24'
             }}>
               <strong>📍 Confirmation Required:</strong> You've selected Table {selectedSeatInModal.table}, Seat {selectedSeatInModal.seat} for {selectedPlayerInModal?.firstName}. Click "Confirm Seat" to save this assignment.
             </div>
           )}
           
           {selectedPlayerInModal && (
-            <div style={{ marginBottom: '16px', padding: '12px', backgroundColor: '#f5f5f5', border: '1px solid #ddd', borderRadius: '4px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                <span><span className="player-name-secondary">{selectedPlayerInModal.firstName} {selectedPlayerInModal.lastName}</span></span>
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <button 
-                    onClick={handleConfirmSeat} 
-                    className={`btn btn-success ${!selectedSeatInModal ? 'btn-disabled' : ''}`}
-                    disabled={!selectedSeatInModal}
-                  >
-                    Confirm Seat
-                  </button>
-                </div>
+            <div style={{ marginBottom: '16px' }}>
+              <div style={{ marginBottom: '12px' }}>
+                <span className="player-name-secondary">{selectedPlayerInModal.firstName} {selectedPlayerInModal.lastName}</span>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <label style={{ fontSize: '0.9rem', fontWeight: '600' }}>Time Slot:</label>
-                <select 
-                  value={modalSelectedTimeSlot} 
-                  onChange={(e) => handleTimeSlotChange(e.target.value)}
-                  className="select-field" 
-                  style={{ width: 'auto', minWidth: '150px' }}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <label style={{ fontSize: '0.9rem', fontWeight: '600' }}>Time Slot:</label>
+                  <select 
+                    value={modalSelectedTimeSlot} 
+                    onChange={(e) => handleTimeSlotChange(e.target.value)}
+                    className="select-field" 
+                    style={{ width: 'auto', minWidth: '150px' }}
+                  >
+                    {availableTimeSlots.map(slot => (
+                      <option key={slot} value={slot}>{getTimeSlotName(modalRound, slot)}</option>
+                    ))}
+                  </select>
+                </div>
+                <button 
+                  onClick={handleConfirmSeat} 
+                  className={`btn btn-success ${!selectedSeatInModal ? 'btn-disabled' : ''}`}
+                  disabled={!selectedSeatInModal}
                 >
-                  {availableTimeSlots.map(slot => (
-                    <option key={slot} value={slot}>{getTimeSlotName(modalRound, slot)}</option>
-                  ))}
-                </select>
+                  Confirm Seat
+                </button>
               </div>
               {selectedSeatInModal ? (
                 <p style={{ margin: '8px 0 0 0', fontSize: '0.85rem', color: '#666' }}>
                   Selected: Table {selectedSeatInModal.table}, Seat {selectedSeatInModal.seat}. Click "Confirm Seat" to assign.
-                </p>
-              ) : playerNeedsReseating ? (
-                <p style={{ margin: '8px 0 0 0', fontSize: '0.85rem', color: '#d63384', fontWeight: '600' }}>
-                  ⚠️ Please select a new seat - this player currently has no seat assigned.
                 </p>
               ) : (
                 <p style={{ margin: '8px 0 0 0', fontSize: '0.85rem', color: '#666' }}>Click a seat to select it.</p>
@@ -430,36 +416,9 @@ const PlayerSeatEdit = ({
               const isPermanentlyDisabled = modalRound === 'semifinals' && tableNumber === 6;
 
               return (
-                <div key={tableNumber}>
+                <div key={tableNumber} style={{ border: '1px solid #ddd', borderRadius: '8px', padding: '16px', backgroundColor: '#f2f2f2' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                     <h4 style={{ margin: 0, fontSize: '1.1rem' }}>Table {tableNumber}</h4>
-                    {!isPermanentlyDisabled && (
-                      <div 
-                        style={{
-                          position: 'relative', 
-                          width: '50px', 
-                          height: '26px',
-                          backgroundColor: isDisabled ? '#ccc' : '#8b0000',
-                          borderRadius: '13px', 
-                          cursor: 'pointer',
-                          transition: 'background-color 0.2s ease'
-                        }} 
-                        onClick={() => toggleTable(tableNumber, modalRound, modalSelectedTimeSlot)}
-                        title={isDisabled ? 'Click to activate' : 'Click to disable'}
-                      >
-                        <div style={{
-                          position: 'absolute', 
-                          top: '2px', 
-                          left: '2px',
-                          width: '22px', 
-                          height: '22px', 
-                          backgroundColor: '#fff',
-                          borderRadius: '50%', 
-                          transition: 'transform 0.2s ease',
-                          transform: isDisabled ? 'translateX(0px)' : 'translateX(24px)',
-                        }} />
-                      </div>
-                    )}
                   </div>
                   {isDisabled ? (
                     <div style={{ height: '80px', boxSizing: 'border-box', borderRadius: '4px', backgroundColor: '#666666', border: '2px solid #ccc', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ffffff', fontSize: '0.9rem', fontWeight: 'bold' }}>
@@ -514,7 +473,11 @@ const PlayerSeatEdit = ({
                           >
                             <div className="seat-label" style={{ color: textColor, fontWeight: 'bold', marginBottom: '2px' }}>Seat {seatNumber}</div>
                             {player ? (
-                              <div className="player-name-compact" style={{ color: textColor }}>{player.firstName} {player.lastName}</div>
+                              isCurrentPlayer ? (
+                                <div className="player-name-compact" style={{ color: textColor }}>CURRENT SEAT</div>
+                              ) : (
+                                <div className="player-name-compact" style={{ color: textColor }}>{player.firstName} {player.lastName}</div>
+                              )
                             ) : (
                               <div style={{ color: textColor }}>Empty</div>
                             )}
@@ -559,16 +522,16 @@ const PlayerSeatEdit = ({
             const timeSlotName = getTimeSlotName(reg.round, reg.timeSlot);
             return (
               <div key={reg.id} style={{ backgroundColor: '#f5f5f5', border: '1px solid #ddd', borderRadius: '4px', padding: '16px', marginBottom: '16px' }}>
-                <div className="card-content" style={{ paddingBottom: '8px' }}>
+                <div className="card-content" style={{ paddingBottom: '0' }}>
+                  <h4 style={{ margin: '0 0 8px 0' }}>{roundInfo?.name} - {timeSlotName}</h4>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <h4 style={{ margin: 0 }}>{roundInfo?.name} - {timeSlotName}</h4>
-                    <button onClick={() => showFullSeating(reg.round, reg.timeSlot, reg)} className="btn btn-secondary">
+                    <p className="player-metadata" style={{ margin: 0 }}>
+                      Current Seat: {(reg.tableNumber != null && reg.seatNumber != null) ? `Table ${reg.tableNumber}, Seat ${reg.seatNumber}` : 'Not Seated'}
+                    </p>
+                    <button onClick={() => showFullSeating(reg.round, reg.timeSlot, reg)} className="btn btn-primary">
                       Edit Seating
                     </button>
                   </div>
-                  <p className="player-metadata" style={{ marginTop: '8px', marginBottom: 0 }}>
-                    Current Seat: {(reg.tableNumber != null && reg.seatNumber != null) ? `Table ${reg.tableNumber}, Seat ${reg.seatNumber}` : 'Not Seated'}
-                  </p>
                 </div>
               </div>
             );

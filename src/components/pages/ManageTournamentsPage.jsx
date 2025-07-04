@@ -71,13 +71,13 @@ const ManageTournamentsPage = () => {
                 <div className="tournament-actions">
                   <button 
                     onClick={() => handleManageClick(tournament)} 
-                    className="btn btn-secondary tournament-manage-btn"
+                    className="btn btn-secondary"
                   >
                     Manage Seating
                   </button>
                   <button 
                     onClick={() => handleDeleteTournament(tournament)} 
-                    className={`btn btn-danger tournament-delete-btn ${selectedEvent === tournament.name ? 'btn-disabled' : ''}`}
+                    className={`btn btn-danger ${selectedEvent === tournament.name ? 'btn-disabled' : ''}`}
                     disabled={selectedEvent === tournament.name}
                   >
                     Delete
