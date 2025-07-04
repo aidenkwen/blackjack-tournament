@@ -7,10 +7,78 @@ import PaymentCard from '../cards/PaymentCard';
 import MulliganCard from '../cards/MulliganCard';
 import PlayerInfoCard from '../cards/PlayerInfoCard';
 import LastPlayerCard from '../cards/LastPlayerCard';
+import toast from 'react-hot-toast';
 
 const RoundRegistrationForm = ({ hook, currentRound, currentRoundInfo, currentTournament, lastRegisteredPlayer, allRegistrations }) => {
+  // Special easter egg function
+  const triggerVIPCelebration = () => {
+    // Create confetti elements
+    const confettiContainer = document.createElement('div');
+    confettiContainer.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 9999;
+    `;
+    
+    // Create more confetti pieces with different shapes and sizes
+    for (let i = 0; i < 150; i++) {
+      const confetti = document.createElement('div');
+      const size = Math.random() * 8 + 4; // 4-12px
+      const shape = Math.random() > 0.5 ? 'circle' : 'square';
+      confetti.style.cssText = `
+        position: absolute;
+        width: ${size}px;
+        height: ${size}px;
+        background: ${['#ff6b6b', '#4ecdc4', '#45b7d1', '#f9ca24', '#f0932b', '#eb4d4b', '#6c5ce7', '#a29bfe'][Math.floor(Math.random() * 8)]};
+        top: -20px;
+        left: ${Math.random() * 100}%;
+        border-radius: ${shape === 'circle' ? '50%' : '0'};
+        animation: confetti-fall ${3 + Math.random() * 2}s linear forwards;
+        animation-delay: ${Math.random() * 1}s;
+      `;
+      confettiContainer.appendChild(confetti);
+    }
+    
+    // Add CSS animation with more dynamic movement
+    const style = document.createElement('style');
+    style.textContent = `
+      @keyframes confetti-fall {
+        0% {
+          transform: translateY(0) rotate(0deg) translateX(0px);
+          opacity: 1;
+        }
+        100% {
+          transform: translateY(100vh) rotate(360deg) translateX(${Math.random() * 300 - 150}px);
+          opacity: 0;
+        }
+      }
+    `;
+    document.head.appendChild(style);
+    document.body.appendChild(confettiContainer);
+    
+    // Clean up after animation
+    setTimeout(() => {
+      document.body.removeChild(confettiContainer);
+      document.head.removeChild(style);
+    }, 6000);
+    
+    // Special toast message - normal styling
+    toast('🎉 WELCOME RANDY OCAMPO! The GOAT has arrived! 🎉', {
+      duration: 4000,
+    });
+  };
+
   const handleSearch = () => {
     hook.searchPlayer(hook.searchAccount);
+    
+    // Easter egg for special player
+    if (hook.searchAccount === '31200200749813') {
+      setTimeout(() => triggerVIPCelebration(), 500);
+    }
   };
 
   const handleCardSwipe = (cardNumber) => {
