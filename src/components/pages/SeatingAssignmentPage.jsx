@@ -1,5 +1,5 @@
-// Updated SeatingAssignmentPage with actual times
-import React, { useState } from 'react';
+// Updated SeatingAssignmentPage with scroll to top
+import React, { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import { useTournamentContext } from '../../context/TournamentContext';
 import { useNavigate } from 'react-router-dom';
@@ -18,6 +18,11 @@ const SeatingAssignmentPage = () => {
   const [confirming, setConfirming] = useState(false);
   const [seatPreferences, setSeatPreferences] = useState([]);
   const [conflictTables, setConflictTables] = useState(new Set());
+
+  // Scroll to top when component mounts
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
 
   const rounds = [
     { key: 'round1', name: 'Round 1', timeSlots: 6 },
@@ -228,11 +233,11 @@ const SeatingAssignmentPage = () => {
           {seatPreferences.length > 0 ? `Assign Random Seat (${seatPreferences.join(', ')})` : 'Assign Random Seat'}
         </button> 
         <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}> 
+                    <button onClick={() => setSelectedSeat(null)} className="btn btn-secondary" disabled={confirming || !selectedSeat} style={{ opacity: (!selectedSeat || confirming) ? 0.5 : 1 }}>
+            Clear
+          </button> 
           <button onClick={confirmAssignment} className="btn btn-success" disabled={confirming || !selectedSeat} style={{ opacity: (!selectedSeat || confirming) ? 0.5 : 1 }}>
             {confirming ? 'Confirming...' : selectedSeat ? `Confirm: Table ${selectedSeat.table}, Seat ${selectedSeat.seat}` : 'Confirm Seat'}
-          </button> 
-          <button onClick={() => setSelectedSeat(null)} className="btn btn-secondary" disabled={confirming || !selectedSeat} style={{ opacity: (!selectedSeat || confirming) ? 0.5 : 1 }}>
-            Clear
           </button> 
         </div> 
       </div>
