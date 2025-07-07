@@ -549,6 +549,12 @@ export const useRoundRegistration = ({
       );
 
       if (existingReg) {
+        // Show toast notification for modification
+        toast(`Modifying ${normalizedPlayer.firstName}'s registration for ${currentRoundInfo.name}`, { 
+          icon: '✏️',
+          duration: 3000
+        });
+
         // Auto-populate with existing registration data
         setSelectedTimeSlot(existingReg.timeSlot ? existingReg.timeSlot.toString() : '');
         setPaymentType(existingReg.paymentType || '');
