@@ -104,6 +104,78 @@ export const useRoundRegistration = ({
       r.isMulligan === true
     ), [currentTournamentRegistrations]);
 
+  // ENHANCED: Round prerequisite validation logic
+  const validateRoundPrerequisites = useCallback((playerAccountNumber, targetRound, playerName) => {
+    switch (targetRound) {
+      case 'round1':
+        // No prerequisites for Round 1
+        return { isValid: true };
+        
+      case 'round2':
+        // Round 2 requires Round 1 registration
+        if (!isRegisteredForRound(playerAccountNumber, 'round1')) {
+          return {
+            isValid: false,
+            message: `${playerName} must be registered in Round 1 before registering for Round 2.`
+          };
+        }
+        return { isValid: true };
+        
+      case 'rebuy1':
+        // Rebuy 1 requires Round 1 registration
+        if (!isRegisteredForRound(playerAccountNumber, 'round1')) {
+          return {
+            isValid: false,
+            message: `${playerName} must be registered in Round 1 before registering for Rebuy 1.`
+          };
+        }
+        return { isValid: true };
+        
+      case 'rebuy2':
+        // Rebuy 2 requires Rebuy 1 registration
+        if (!isRegisteredForRound(playerAccountNumber, 'rebuy1')) {
+          return {
+            isValid: false,
+            message: `${playerName} must be registered in Rebuy 1 before registering for Rebuy 2.`
+          };
+        }
+        return { isValid: true };
+        
+      case 'superrebuy':
+        // Super Rebuy requires Round 2 registration
+        if (!isRegisteredForRound(playerAccountNumber, 'round2')) {
+          return {
+            isValid: false,
+            message: `${playerName} must be registered in Round 2 before registering for Super Rebuy.`
+          };
+        }
+        return { isValid: true };
+        
+      case 'quarters':
+        // Quarters requires Round 2 registration
+        if (!isRegisteredForRound(playerAccountNumber, 'round2')) {
+          return {
+            isValid: false,
+            message: `${playerName} must be registered in Round 2 before registering for Quarterfinals.`
+          };
+        }
+        return { isValid: true };
+        
+      case 'semis':
+        // Semis requires Quarters registration
+        if (!isRegisteredForRound(playerAccountNumber, 'quarters')) {
+          return {
+            isValid: false,
+            message: `${playerName} must be registered in Quarterfinals before registering for Semifinals.`
+          };
+        }
+        return { isValid: true };
+        
+      default:
+        return { isValid: true };
+    }
+  }, [isRegisteredForRound]);
+
   // FIXED: Simplified eventType logic - it's just about how they paid
   const determineEventType = useCallback((paymentType, playerEntryType, currentRound) => {
     // Mulligan is always "Mulligan"
@@ -128,6 +200,18 @@ export const useRoundRegistration = ({
 
     const normalizedPlayer = normalizePlayerData(currentPlayer);
     const currentTimeSlot = normalizePaymentAmount(selectedTimeSlot);
+    
+    // ENHANCED: Validate round prerequisites
+    const prerequisiteCheck = validateRoundPrerequisites(
+      normalizedPlayer.playerAccountNumber, 
+      currentRound, 
+      normalizedPlayer.firstName
+    );
+    
+    if (!prerequisiteCheck.isValid) {
+      toast.error(prerequisiteCheck.message);
+      return;
+    }
     
     // Find existing registration for this player and round
     const existingRegIndex = allRegistrations.findIndex(r => 
@@ -415,7 +499,7 @@ export const useRoundRegistration = ({
     mulliganAmount, splitMulliganPayment, mulliganPaymentType2, mulliganAmount2, 
     comments, host, allRegistrations, currentRound, selectedEvent, employee, 
     currentTournament.mulliganCost, setRegistrations, setPendingRegistration, 
-    setLastRegisteredPlayer, onSeatingNeeded, determineEventType
+    setLastRegisteredPlayer, onSeatingNeeded, determineEventType, validateRoundPrerequisites
   ]);
 
   const searchPlayer = useCallback((searchAccountParam) => {
@@ -439,15 +523,15 @@ export const useRoundRegistration = ({
     if (player) {
       const normalizedPlayer = normalizePlayerData(player);
       
-      // FIXED: Enforce Round 1 registration requirement for ALL rounds except Round 1
-      if (currentRound !== 'round1' && !isRegisteredForRound(normalizedPlayer.playerAccountNumber, 'round1')) {
-        toast.error(`${normalizedPlayer.firstName} must be registered in Round 1 before registering for ${currentRoundInfo.name}.`);
-        return;
-      }
+      // ENHANCED: Use the new validateRoundPrerequisites function
+      const prerequisiteCheck = validateRoundPrerequisites(
+        normalizedPlayer.playerAccountNumber, 
+        currentRound, 
+        normalizedPlayer.firstName
+      );
       
-      // FIXED: Additional specific validation for rebuy rounds
-      if (currentRound === 'rebuy2' && !isRegisteredForRound(normalizedPlayer.playerAccountNumber, 'rebuy1')) {
-        toast.error(`${normalizedPlayer.firstName} must be registered in Rebuy 1 before registering for Rebuy 2.`);
+      if (!prerequisiteCheck.isValid) {
+        toast.error(prerequisiteCheck.message);
         return;
       }
 
@@ -525,7 +609,7 @@ export const useRoundRegistration = ({
         toast.error('Player not found. New players can only be added in Round 1.');
       }
     }
-  }, [masterData, currentRound, currentRoundInfo.name, currentRoundInfo.cost, isRegisteredForRound, allRegistrations, currentTournament.mulliganCost]);
+  }, [masterData, currentRound, currentRoundInfo.name, currentRoundInfo.cost, allRegistrations, currentTournament.mulliganCost, validateRoundPrerequisites]);
 
   const handleNewPlayerSave = useCallback((newPlayer, registerImmediately, registrationData) => {
     if (masterData.some(p => 
@@ -738,6 +822,7 @@ export const useRoundRegistration = ({
 
     // Utilities
     isRegisteredForRound,
-    playerHasMulligan
+    playerHasMulligan,
+    validateRoundPrerequisites
   };
 };
