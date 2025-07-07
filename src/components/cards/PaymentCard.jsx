@@ -128,12 +128,6 @@ const PaymentCard = ({
           </div>
         </div>
       )}
-      
-      {splitPayment && paymentAmount && paymentAmount2 && (
-        <p className="player-metadata" style={{ marginTop: '8px' }}>
-          Total: ${(parseInt(paymentAmount) || 0) + (parseInt(paymentAmount2) || 0)}
-        </p>
-      )}
     </div>
   );
 };
