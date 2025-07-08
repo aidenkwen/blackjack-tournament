@@ -29,13 +29,13 @@ const EventSelectionPage = () => {
       </h1>
       
       <div className="form-group">
-        <label className="mb-2">Select Event</label>
+        <label className="mb-2">Select Tournament</label>
         <select
           value={selectedEvent}
           onChange={(e) => setSelectedEvent(e.target.value)}
           className="select-field"
         >
-          <option value="">-- Select Event --</option>
+          <option value="">-- Select Tournament --</option>
           {allEvents.map((event) => (
             <option key={event} value={event}>
               {event}
