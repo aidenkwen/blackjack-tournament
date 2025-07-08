@@ -63,17 +63,17 @@ const RegistrationPage = () => {
   }, [context.lastSelectedRound, activeRound]);
 
   const handleRoundChange = (newRound) => {
-    if (newRound !== activeRound) {
-      if (context.setLastSelectedRound) {
-        context.setLastSelectedRound(newRound);
-      }
-      
-      if (registrationHook.clearForm) {
-        registrationHook.clearForm();
-      }
-      
-      setActiveRound(newRound);
+    // Always clear the form and search results, even when clicking the same tab
+    if (registrationHook.clearForm) {
+      registrationHook.clearForm();
     }
+    
+    // Update the round selection
+    if (context.setLastSelectedRound) {
+      context.setLastSelectedRound(newRound);
+    }
+    
+    setActiveRound(newRound);
   };
 
   const handleNavigateWithContext = (path) => {
