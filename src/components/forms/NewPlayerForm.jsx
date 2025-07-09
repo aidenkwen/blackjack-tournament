@@ -40,7 +40,7 @@ const NewPlayerForm = ({
     { value: 6, name: '12:45 PM' }
   ];
 
-  // SIMPLIFIED: Entry type change handler
+  // FIXED: Enhanced entry type change handler
   const handleEntryTypeChange = (newEntryType) => {
     setEntryType(newEntryType);
     if (newEntryType === 'COMP') {
@@ -55,7 +55,7 @@ const NewPlayerForm = ({
     }
   };
 
-  // SIMPLIFIED: Payment type change handler
+  // FIXED: Enhanced payment type change handler
   const handlePaymentTypeChange = (newPaymentType) => {
     setPaymentType(newPaymentType);
     if (newPaymentType === 'Comp') {

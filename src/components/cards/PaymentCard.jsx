@@ -49,6 +49,21 @@ const PaymentCard = ({
     return ['Cash', 'Credit', 'Chips', 'Comp'];
   };
 
+  // FIXED: Enhanced payment type change handler that clears split payment fields when switching to Comp
+  const handlePaymentTypeChangeEnhanced = (newPaymentType) => {
+    // Call the original handler first
+    if (handlePaymentTypeChange) {
+      handlePaymentTypeChange(newPaymentType);
+    }
+    
+    // Additional logic: If switching to Comp, clear split payment completely
+    if (newPaymentType === 'Comp') {
+      setSplitPayment(false);
+      setPaymentType2('');
+      setPaymentAmount2('');
+    }
+  };
+
   return (
     <div className="card payment-card">
       <h4 style={{ margin: '0 0 16px 0', fontSize: '1.1rem' }}>{getPaymentTitle()}</h4>
@@ -59,7 +74,7 @@ const PaymentCard = ({
             <label className="mb-2">Payment Type</label>
             <select
               value={paymentType}
-              onChange={(e) => handlePaymentTypeChange(e.target.value)}
+              onChange={(e) => handlePaymentTypeChangeEnhanced(e.target.value)}
               className="select-field"
             >
               <option value="">-- Select Payment Type --</option>
