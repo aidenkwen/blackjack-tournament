@@ -285,10 +285,41 @@ export const useRoundRegistration = ({
     console.log('currentTimeSlot:', currentTimeSlot);
     console.log('isTimeSlotChange:', isTimeSlotChange);
 
+    // Determine what action will be taken BEFORE calling setRegistrations
     let needsSeating = false;
     let actionTaken = false;
     
-    console.log('Initial actionTaken:', actionTaken);
+    // Check if we're creating a new registration
+    if (isFirstTimeRegistration) {
+      actionTaken = true;
+      needsSeating = true;
+      console.log('Will create NEW REGISTRATION - actionTaken set to true');
+    }
+    
+    // Check if we're updating an existing registration (time slot change)
+    if (isUpdate && isTimeSlotChange) {
+      actionTaken = true;
+      needsSeating = true;
+      console.log('Will UPDATE REGISTRATION with time slot change - actionTaken set to true');
+    } else if (isUpdate) {
+      actionTaken = true;
+      needsSeating = false;
+      console.log('Will UPDATE REGISTRATION without time slot change - actionTaken set to true');
+    }
+    
+    // Check if we're adding/removing a mulligan
+    if (addMulligan && existingMulliganIndex === -1) {
+      actionTaken = true;
+      console.log('Will ADD MULLIGAN - actionTaken set to true');
+    } else if (!addMulligan && existingMulliganIndex > -1) {
+      actionTaken = true;
+      console.log('Will REMOVE MULLIGAN - actionTaken set to true');
+    } else if (addMulligan && existingMulliganIndex > -1) {
+      actionTaken = true;
+      console.log('Will UPDATE MULLIGAN - actionTaken set to true');
+    }
+    
+    console.log('Final actionTaken before setRegistrations:', actionTaken);
 
     // Use functional update to batch all registration changes
     setRegistrations(prevRegistrations => {
@@ -338,10 +369,6 @@ export const useRoundRegistration = ({
           }
           return r;
         });
-        
-        needsSeating = isTimeSlotChange;
-        actionTaken = true;
-        console.log('UPDATE path - actionTaken set to true');
       } else {
         // Create new registration
         
@@ -384,9 +411,6 @@ export const useRoundRegistration = ({
         };
         
         updatedRegistrations.push(newReg);
-        actionTaken = true;
-        console.log('NEW REGISTRATION path - actionTaken set to true');
-        needsSeating = true;
       }
 
       // Handle mulligan separately - ALWAYS eventType = "Mulligan"
@@ -442,8 +466,6 @@ export const useRoundRegistration = ({
           };
           updatedRegistrations.push(mulliganData);
         }
-        actionTaken = true;
-        console.log('MULLIGAN path - actionTaken set to true');
       } else if (existingMulliganIndex > -1) {
         // Remove mulligan if checkbox is unchecked
         updatedRegistrations = updatedRegistrations.filter(r => 
@@ -451,8 +473,6 @@ export const useRoundRegistration = ({
             r.round === currentRound && 
             r.isMulligan)
         );
-        actionTaken = true;
-        console.log('REMOVE MULLIGAN path - actionTaken set to true');
       }
 
       return updatedRegistrations;
