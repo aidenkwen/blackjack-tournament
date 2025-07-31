@@ -192,6 +192,14 @@ export const useRoundRegistration = ({
   }, []);
 
   const handleRegistration = useCallback(() => {
+    console.log('=== REGISTRATION DEBUG START ===');
+    console.log('currentPlayer:', currentPlayer);
+    console.log('selectedTimeSlot:', selectedTimeSlot);
+    console.log('paymentType:', paymentType);
+    console.log('paymentAmount:', paymentAmount);
+    console.log('addMulligan:', addMulligan);
+    console.log('currentRound:', currentRound);
+    
     if (!currentPlayer) return;
     if (!validateTimeSlot(selectedTimeSlot)) {
       toast.error(`Please select a time slot for ${currentRoundInfo.name}.`);
@@ -200,6 +208,9 @@ export const useRoundRegistration = ({
 
     const normalizedPlayer = normalizePlayerData(currentPlayer);
     const currentTimeSlot = normalizePaymentAmount(selectedTimeSlot);
+    
+    console.log('normalizedPlayer:', normalizedPlayer);
+    console.log('currentTimeSlot:', currentTimeSlot);
     
     // ENHANCED: Validate round prerequisites
     const prerequisiteCheck = validateRoundPrerequisites(
@@ -227,6 +238,11 @@ export const useRoundRegistration = ({
 
     const isFirstTimeRegistration = existingRegIndex === -1;
     const isUpdate = !isFirstTimeRegistration;
+    
+    console.log('existingRegIndex:', existingRegIndex);
+    console.log('existingMulliganIndex:', existingMulliganIndex);
+    console.log('isFirstTimeRegistration:', isFirstTimeRegistration);
+    console.log('isUpdate:', isUpdate);
     
     // FIXED: Check if payment is required based on round type
     const isPaymentRound = ['round1', 'rebuy1', 'rebuy2', 'superrebuy'].includes(currentRound);
@@ -264,8 +280,15 @@ export const useRoundRegistration = ({
     const existingReg = existingRegIndex > -1 ? allRegistrations[existingRegIndex] : null;
     const isTimeSlotChange = existingReg && existingReg.timeSlot !== currentTimeSlot;
 
+    console.log('existingReg:', existingReg);
+    console.log('existingReg timeSlot:', existingReg?.timeSlot);
+    console.log('currentTimeSlot:', currentTimeSlot);
+    console.log('isTimeSlotChange:', isTimeSlotChange);
+
     let needsSeating = false;
     let actionTaken = false;
+    
+    console.log('Initial actionTaken:', actionTaken);
 
     // Use functional update to batch all registration changes
     setRegistrations(prevRegistrations => {
@@ -318,6 +341,7 @@ export const useRoundRegistration = ({
         
         needsSeating = isTimeSlotChange;
         actionTaken = true;
+        console.log('UPDATE path - actionTaken set to true');
       } else {
         // Create new registration
         
@@ -361,6 +385,7 @@ export const useRoundRegistration = ({
         
         updatedRegistrations.push(newReg);
         actionTaken = true;
+        console.log('NEW REGISTRATION path - actionTaken set to true');
         needsSeating = true;
       }
 
@@ -418,6 +443,7 @@ export const useRoundRegistration = ({
           updatedRegistrations.push(mulliganData);
         }
         actionTaken = true;
+        console.log('MULLIGAN path - actionTaken set to true');
       } else if (existingMulliganIndex > -1) {
         // Remove mulligan if checkbox is unchecked
         updatedRegistrations = updatedRegistrations.filter(r => 
@@ -426,11 +452,15 @@ export const useRoundRegistration = ({
             r.isMulligan)
         );
         actionTaken = true;
+        console.log('REMOVE MULLIGAN path - actionTaken set to true');
       }
 
       return updatedRegistrations;
     });
 
+    console.log('Final actionTaken value:', actionTaken);
+    console.log('=== REGISTRATION DEBUG END ===');
+    
     if (!actionTaken) {
       toast.error("No changes to save.");
       return;
@@ -516,9 +546,15 @@ export const useRoundRegistration = ({
     }
 
     const normalizedInput = normalizeAccount(accountNum);
+    console.log('Searching for player:', normalizedInput);
+    console.log('Available masterData:', masterData);
+    console.log('MasterData length:', masterData?.length);
+    
     const player = masterData.find((p) => 
       normalizeAccount(normalizePlayerData(p).playerAccountNumber) === normalizedInput
     );
+    
+    console.log('Found player:', player);
 
     if (player) {
       const normalizedPlayer = normalizePlayerData(player);
