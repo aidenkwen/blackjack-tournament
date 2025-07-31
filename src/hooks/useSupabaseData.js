@@ -554,9 +554,28 @@ export const useRegistrations = (selectedEvent) => {
         return;
       }
       
-      // Update in Supabase (batch update)
+      console.log('About to process registrations:', updatedRegistrations.length);
+      
+      // Process each registration - either insert new ones or update existing ones
       for (const reg of updatedRegistrations) {
-        if (reg.id) {
+        // Check if this registration exists in the database
+        const { data: existingReg, error: fetchError } = await supabase
+          .from('registrations')
+          .select('id')
+          .eq('tournament_id', tournament.id)
+          .eq('account_number', reg.playerAccountNumber || reg.accountNumber)
+          .eq('round', reg.round)
+          .eq('mulligan', reg.isMulligan || false)
+          .single();
+        
+        if (fetchError && fetchError.code !== 'PGRST116') { // PGRST116 = no rows found
+          console.error('Error checking existing registration:', fetchError);
+          continue;
+        }
+        
+        if (existingReg) {
+          // Update existing registration
+          console.log('Updating existing registration:', existingReg.id);
           const { error: updateError } = await supabase
             .from('registrations')
             .update({
@@ -568,21 +587,48 @@ export const useRegistrations = (selectedEvent) => {
               table_number: reg.tableNumber,
               seat_number: reg.seatNumber,
               host: reg.host,
-              mulligan: reg.isMulligan || reg.mulligan,
-              last_player: reg.lastPlayer,
-              entry_type: reg.entryType,
+              mulligan: reg.isMulligan || reg.mulligan || false,
+              last_player: reg.lastPlayer || false,
+              entry_type: reg.entryType || 'PAY',
               registered_by: reg.employee || reg.registeredBy
             })
-            .eq('id', reg.id);
+            .eq('id', existingReg.id);
           
           if (updateError) {
             console.error('Error updating registration:', updateError);
             throw updateError;
           }
+        } else {
+          // Insert new registration
+          console.log('Inserting new registration for:', reg.firstName, reg.lastName);
+          const { error: insertError } = await supabase
+            .from('registrations')
+            .insert([{
+              tournament_id: tournament.id,
+              event_name: selectedEvent,
+              first_name: reg.firstName,
+              last_name: reg.lastName,
+              account_number: reg.playerAccountNumber || reg.accountNumber,
+              round: reg.round,
+              time_slot: reg.timeSlot,
+              table_number: reg.tableNumber,
+              seat_number: reg.seatNumber,
+              host: reg.host,
+              mulligan: reg.isMulligan || reg.mulligan || false,
+              last_player: reg.lastPlayer || false,
+              entry_type: reg.entryType || 'PAY',
+              registered_by: reg.employee || reg.registeredBy
+            }]);
+          
+          if (insertError) {
+            console.error('Error inserting registration:', insertError);
+            throw insertError;
+          }
         }
       }
       
-      setRegistrations(updatedRegistrations);
+      // Reload registrations from database to get the latest data
+      await loadRegistrations(selectedEvent);
     } catch (err) {
       const errorMessage = handleSupabaseError(err);
       setError(errorMessage);
