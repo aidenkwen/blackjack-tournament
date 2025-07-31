@@ -9,6 +9,7 @@ const AddTournamentPage = () => {
   const { 
     tournaments, 
     addTournament, 
+    setSelectedEvent,
     uploadPlayersFile, 
     playersLoading 
   } = useTournamentContext();
@@ -49,17 +50,33 @@ const AddTournamentPage = () => {
 
     try {
       setImporting(true);
+      console.log('Starting tournament creation...');
+      
       const newTournament = {
         name: tournamentName.trim(),
         entryCost: entry,
         rebuyCost: rebuy,
         mulliganCost: mulligan
       };
+      
+      console.log('Creating tournament:', newTournament);
       await addTournament(newTournament);
+      console.log('Tournament created successfully');
       toast.success(`Tournament "${newTournament.name}" created!`);
+      
+      // Set the selected event so the hook knows which tournament to work with
+      console.log('Setting selected event to:', tournamentName.trim());
+      setSelectedEvent(tournamentName.trim());
+      
+      // Small delay to ensure state updates propagate
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      console.log('About to upload players file:', { tournamentName: tournamentName.trim(), selectedFile });
+      console.log('uploadPlayersFile function:', uploadPlayersFile);
       
       const result = await uploadPlayersFile(tournamentName.trim(), selectedFile);
       
+      console.log('Upload result:', result);
       let message = `Player upload: ${result.recordsInserted} of ${result.totalRows} processed.`;
       if (result.errorCount > 0) message += `\n${result.errorCount} rows had errors.`;
       toast.success(message, { duration: 5000 });
@@ -67,6 +84,8 @@ const AddTournamentPage = () => {
       navigate('/');
       
     } catch (error) {
+      console.error('ERROR in tournament creation:', error);
+      console.error('Error stack:', error.stack);
       toast.error(`Error: ${error.message}`);
     } finally {
       setImporting(false);

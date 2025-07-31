@@ -3,16 +3,17 @@ import { useRoundRegistration } from '../../hooks/useRoundRegistration';
 import RoundRegistrationForm from '../forms/RoundRegistrationForm';
 import { useTournamentContext } from '../../context/TournamentContext';
 import { useNavigate } from 'react-router-dom';
+import { ensureTournamentDefaults } from '../../utils/tournamentDefaults';
 
 const RegistrationPage = () => {
   const navigate = useNavigate();
   const context = useTournamentContext();
   const [activeRound, setActiveRound] = useState('round1');
 
-  const currentTournament = useMemo(() => 
-    context.tournaments.find(t => t.name === context.selectedEvent) || { entryCost: 500, rebuyCost: 500, mulliganCost: 100 },
-    [context.tournaments, context.selectedEvent]
-  );
+  const currentTournament = useMemo(() => {
+    const tournament = context.tournaments.find(t => t.name === context.selectedEvent);
+    return ensureTournamentDefaults(tournament);
+  }, [context.tournaments, context.selectedEvent]);
 
   const rounds = [
     { key: 'round1', name: 'Round 1', isRebuy: false, timeSlots: 6, cost: currentTournament.entryCost },

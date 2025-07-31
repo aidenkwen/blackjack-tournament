@@ -165,12 +165,20 @@ const SeatingAssignmentPage = () => {
     } 
     setConfirming(true); 
     
+    console.log('=== SEATING ASSIGNMENT DEBUG ===');
+    console.log('selectedSeat:', selectedSeat);
+    console.log('pendingRegistration:', pendingRegistration);
+    console.log('currentPlayerTimeSlot:', currentPlayerTimeSlot);
+    
     // FIXED: Update registrations by mapping over existing ones instead of adding duplicates
     setRegistrations(prevRegistrations => {
-      return prevRegistrations.map(reg => {
+      console.log('prevRegistrations length:', prevRegistrations.length);
+      const updatedRegs = prevRegistrations.map(reg => {
         // Find the pending registrations and assign seating
         const isPendingReg = pendingRegistration.registrations.some(pr => pr.id === reg.id);
         if (isPendingReg) {
+          console.log('Updating registration for seating:', reg.firstName, reg.lastName);
+          console.log('Setting tableNumber:', selectedSeat.table, 'seatNumber:', selectedSeat.seat);
           return {
             ...reg,
             tableNumber: selectedSeat.table,
@@ -180,6 +188,8 @@ const SeatingAssignmentPage = () => {
         }
         return reg;
       });
+      console.log('Updated registrations length:', updatedRegs.length);
+      return updatedRegs;
     });
     
     // FIXED: Now set lastRegisteredPlayer since seating is complete

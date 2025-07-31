@@ -1,5 +1,5 @@
   import React, { createContext, useState, useContext, useCallback, useEffect } from 'react';
-  import { useTournaments, useTournamentPlayers, useRegistrations } from '../hooks/useapidata';
+  import { useTournaments, useTournamentPlayers, useRegistrations, useDisabledTables } from '../hooks/useSupabaseData';
 
   // 1. Create the Context
   const TournamentContext = createContext();
@@ -13,6 +13,13 @@
   export const TournamentProvider = ({ children }) => {
     // All the state that was in App.jsx now lives here
     const [selectedEvent, setSelectedEvent] = useState('');
+
+  // Debug logging for selectedEvent changes
+  useEffect(() => {
+    console.log('SelectedEvent changed to:', selectedEvent);
+    console.log('SelectedEvent type:', typeof selectedEvent);
+    console.log('SelectedEvent stringified:', JSON.stringify(selectedEvent));
+  }, [selectedEvent]);
     const [employee, setEmployee] = useState('');
     const [lastRegisteredPlayer, setLastRegisteredPlayer] = useState(null);
     const [pendingRegistration, setPendingRegistration] = useState(null);
@@ -33,25 +40,7 @@
       lastSearchResults: null
     });
 
-    // Add disabled tables state with localStorage persistence
-    const [globalDisabledTables, setGlobalDisabledTables] = useState(() => {
-      try {
-        const stored = localStorage.getItem('blackjack_disabled_tables');
-        return stored ? JSON.parse(stored) : {};
-      } catch (error) {
-        console.error('Error loading disabled tables:', error);
-        return {};
-      }
-    });
-
-    // Save to localStorage whenever globalDisabledTables changes
-    useEffect(() => {
-      try {
-        localStorage.setItem('blackjack_disabled_tables', JSON.stringify(globalDisabledTables));
-      } catch (error) {
-        console.error('Error saving disabled tables:', error);
-      }
-    }, [globalDisabledTables]);
+    // Disabled tables now handled by Supabase hook
 
     // FIXED: Use useCallback for state management functions to prevent unnecessary re-renders
     const saveSearchState = useCallback((searchData) => {
@@ -88,6 +77,7 @@
     const tournamentsApi = useTournaments();
     const playersApi = useTournamentPlayers(selectedEvent);
     const registrationsApi = useRegistrations(selectedEvent);
+    const disabledTablesApi = useDisabledTables(selectedEvent);
 
     // FIXED: Use useCallback for context value to prevent unnecessary re-renders
     const contextValue = React.useMemo(() => ({
@@ -101,7 +91,7 @@
       lastSelectedTimeSlot,
       lastRoundPreferences,
       persistentSearchData,
-      globalDisabledTables,
+      globalDisabledTables: disabledTablesApi.disabledTables,
       
       // Setters
       setSelectedEvent,
@@ -112,7 +102,7 @@
       setLastSelectedRound,
       setLastSelectedTimeSlot,
       setLastRoundPreferences,
-      setGlobalDisabledTables,
+      setGlobalDisabledTables: disabledTablesApi.updateDisabledTables,
 
       // Search state management functions
       saveSearchState,
@@ -141,12 +131,12 @@
     }), [
       selectedEvent, employee, lastRegisteredPlayer, pendingRegistration,
       lastActiveTab, lastSelectedRound, lastSelectedTimeSlot, lastRoundPreferences,
-      persistentSearchData, globalDisabledTables, saveSearchState, clearSearchState, 
+      persistentSearchData, disabledTablesApi.disabledTables, saveSearchState, clearSearchState, 
       clearTournamentContext, restoreSearchState, tournamentsApi.tournaments, 
       tournamentsApi.loading, tournamentsApi.error, tournamentsApi.addTournament, 
       tournamentsApi.deleteTournament, playersApi, registrationsApi.registrations, 
       registrationsApi.setRegistrations, registrationsApi.addRegistration, 
-      registrationsApi.loading, registrationsApi.error
+      registrationsApi.loading, registrationsApi.error, disabledTablesApi.updateDisabledTables
     ]);
 
     return (
