@@ -1,8 +1,9 @@
-// Updated SeatingAssignmentPage with scroll to top
+// Updated SeatingAssignmentPage with real-time updates
 import React, { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import { useTournamentContext } from '../../context/TournamentContext';
 import { useNavigate } from 'react-router-dom';
+import { supabase } from '../../lib/supabase';
 
 const SeatingAssignmentPage = () => {
   const navigate = useNavigate();
@@ -23,6 +24,100 @@ const SeatingAssignmentPage = () => {
   useEffect(() => {
     window.scrollTo(0, 0);
   }, []);
+
+  // Set up real-time subscription for seat updates
+  useEffect(() => {
+    if (!selectedEvent) return;
+
+    console.log('Setting up real-time subscription for:', selectedEvent);
+    
+    // Get tournament ID first
+    const setupSubscription = async () => {
+      const { data: tournament } = await supabase
+        .from('tournaments')
+        .select('id')
+        .eq('name', selectedEvent)
+        .single();
+      
+      if (!tournament) return;
+
+      // Subscribe to registration changes for this tournament
+      const channel = supabase
+        .channel(`registrations-${tournament.id}`)
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'registrations',
+            filter: `tournament_id=eq.${tournament.id}`
+          },
+          (payload) => {
+            console.log('Real-time update received:', payload);
+            
+            if (payload.eventType === 'UPDATE' || payload.eventType === 'INSERT') {
+              const updatedReg = payload.new;
+              
+              // Show notification for seat assignments
+              if (updatedReg.table_number && updatedReg.seat_number) {
+                toast(`Seat ${updatedReg.table_number}-${updatedReg.seat_number} was just assigned to ${updatedReg.first_name} ${updatedReg.last_name}`, {
+                  icon: '🪑',
+                  duration: 3000,
+                });
+              }
+              
+              // Update local registrations state
+              setRegistrations(prev => {
+                const existingIndex = prev.findIndex(r => r.id === updatedReg.id);
+                if (existingIndex >= 0) {
+                  // Update existing registration
+                  const updated = [...prev];
+                  updated[existingIndex] = {
+                    ...updated[existingIndex],
+                    tableNumber: updatedReg.table_number,
+                    seatNumber: updatedReg.seat_number,
+                    timeSlot: updatedReg.time_slot,
+                    // Update other fields that might have changed
+                  };
+                  return updated;
+                } else {
+                  // Add new registration
+                  return [...prev, {
+                    ...updatedReg,
+                    eventName: selectedEvent,
+                    accountNumber: updatedReg.account_number,
+                    firstName: updatedReg.first_name,
+                    lastName: updatedReg.last_name,
+                    tableNumber: updatedReg.table_number,
+                    seatNumber: updatedReg.seat_number,
+                    timeSlot: updatedReg.time_slot,
+                    entryType: updatedReg.entry_type,
+                    registeredBy: updatedReg.registered_by,
+                    createdAt: updatedReg.created_at,
+                    playerAccountNumber: updatedReg.account_number,
+                    paymentType: updatedReg.payment_type,
+                    paymentAmount: updatedReg.payment_amount,
+                    paymentType2: updatedReg.payment_type2,
+                    paymentAmount2: updatedReg.payment_amount2,
+                    comments: updatedReg.comments,
+                    isMulligan: updatedReg.mulligan
+                  }];
+                }
+              });
+            }
+          }
+        )
+        .subscribe();
+
+      // Cleanup subscription on unmount
+      return () => {
+        console.log('Cleaning up real-time subscription');
+        supabase.removeChannel(channel);
+      };
+    };
+
+    setupSubscription();
+  }, [selectedEvent, setRegistrations]);
 
   const rounds = [
     { key: 'round1', name: 'Round 1', timeSlots: 6 },
@@ -249,7 +344,30 @@ const SeatingAssignmentPage = () => {
       navigate('/register');
     } catch (error) {
       console.error('Error saving seating assignment:', error);
-      toast.error('Failed to save seating assignment. Please try again.');
+      
+      // Check if it's a unique constraint violation (seat already taken)
+      if (error.message?.includes('unique_seat_assignment') || 
+          error.code === '23505' || // PostgreSQL unique violation
+          error.message?.includes('duplicate key value')) {
+        toast.error(
+          `Seat ${selectedSeat.table}-${selectedSeat.seat} was just taken by another user. Please select a different seat.`,
+          { duration: 5000, icon: '⚠️' }
+        );
+        
+        // Force reload registrations to get latest seat assignments
+        try {
+          const { loadRegistrations } = await import('../../hooks/useSupabaseData');
+          await loadRegistrations(selectedEvent);
+        } catch (reloadError) {
+          console.error('Error reloading registrations:', reloadError);
+        }
+        
+        // Clear selected seat
+        setSelectedSeat(null);
+      } else {
+        toast.error('Failed to save seating assignment. Please try again.');
+      }
+      
       setConfirming(false);
     }
   };

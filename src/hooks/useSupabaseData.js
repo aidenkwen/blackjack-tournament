@@ -214,15 +214,26 @@ export const useTournamentPlayers = (selectedEvent) => {
       if (tournamentError) throw tournamentError;
       if (!tournament) throw new Error('Tournament not found');
       
-      // Delete existing players for this tournament
-      await supabase
+      // Get existing players to merge with
+      const { data: existingPlayers, error: fetchError } = await supabase
         .from('tournament_players')
-        .delete()
+        .select('*')
         .eq('tournament_id', tournament.id);
       
-      // Insert new players
+      if (fetchError) throw fetchError;
+      
+      // Create a map of existing players by account number for easy lookup
+      const existingPlayersMap = new Map();
+      (existingPlayers || []).forEach(player => {
+        existingPlayersMap.set(player.player_account_number, player);
+      });
+      
+      // Separate players into new and existing
+      const playersToInsert = [];
+      const playersToUpdate = [];
+      
       if (players.length > 0) {
-        const playersToInsert = players.map(player => {
+        players.forEach(player => {
           // Try multiple field name variations for account number
           const accountNumber = player.PlayerAccountNumber || 
                               player.playerAccountNumber || 
@@ -251,7 +262,7 @@ export const useTournamentPlayers = (selectedEvent) => {
             });
           }
           
-          return {
+          const playerData = {
             tournament_id: tournament.id,
             player_account_number: accountNumber,
             first_name: firstName,
@@ -267,21 +278,53 @@ export const useTournamentPlayers = (selectedEvent) => {
               }, {})
             }
           };
+          
+          // Check if player already exists
+          if (existingPlayersMap.has(accountNumber)) {
+            playersToUpdate.push({
+              ...playerData,
+              id: existingPlayersMap.get(accountNumber).id
+            });
+          } else {
+            playersToInsert.push(playerData);
+          }
         });
         
-        console.log('Players to insert:', playersToInsert.slice(0, 2)); // Log first 2 players
-        
-        const { error: insertError, data: insertResult } = await supabase
-          .from('tournament_players')
-          .insert(playersToInsert)
-          .select();
-        
-        console.log('Insert result:', { insertResult, insertError });
-        if (insertError) {
-          console.error('Insert error details:', insertError);
-          throw insertError;
+        // Insert new players
+        if (playersToInsert.length > 0) {
+          console.log(`Inserting ${playersToInsert.length} new players`);
+          const { error: insertError, data: insertResult } = await supabase
+            .from('tournament_players')
+            .insert(playersToInsert)
+            .select();
+          
+          if (insertError) {
+            console.error('Insert error details:', insertError);
+            throw insertError;
+          }
+          console.log(`Successfully inserted ${insertResult?.length || 0} players`);
         }
-        console.log(`Successfully inserted ${insertResult?.length || 0} players`);
+        
+        // Update existing players
+        if (playersToUpdate.length > 0) {
+          console.log(`Updating ${playersToUpdate.length} existing players`);
+          // Update players one by one (Supabase doesn't support bulk updates well)
+          for (const player of playersToUpdate) {
+            const { id, ...updateData } = player;
+            const { error: updateError } = await supabase
+              .from('tournament_players')
+              .update(updateData)
+              .eq('id', id);
+            
+            if (updateError) {
+              console.error(`Error updating player ${player.player_account_number}:`, updateError);
+              // Continue with other updates even if one fails
+            }
+          }
+          console.log('Finished updating existing players');
+        }
+        
+        console.log(`Upload complete: ${playersToInsert.length} new, ${playersToUpdate.length} updated`);
       }
       
       setTournamentPlayers(prev => ({
@@ -669,6 +712,14 @@ export const useRegistrations = (selectedEvent) => {
           if (updateError) {
             console.error('Error updating registration:', updateError);
             console.error('Failed update payload:', updatePayload);
+            // Check if it's a seat assignment conflict
+            if (updateError.code === '23505' || updateError.message?.includes('unique_seat_assignment')) {
+              // Add more context to the error
+              const conflictError = new Error(`Seat ${reg.tableNumber}-${reg.seatNumber} is already taken`);
+              conflictError.code = '23505';
+              conflictError.originalError = updateError;
+              throw conflictError;
+            }
             throw updateError;
           } else {
             console.log('Update successful! Returned data:', updateData);
@@ -707,6 +758,14 @@ export const useRegistrations = (selectedEvent) => {
           
           if (insertError) {
             console.error('Error inserting registration:', insertError);
+            // Check if it's a seat assignment conflict
+            if (insertError.code === '23505' || insertError.message?.includes('unique_seat_assignment')) {
+              // Add more context to the error
+              const conflictError = new Error(`Seat ${reg.tableNumber}-${reg.seatNumber} is already taken`);
+              conflictError.code = '23505';
+              conflictError.originalError = insertError;
+              throw conflictError;
+            }
             throw insertError;
           }
         }
