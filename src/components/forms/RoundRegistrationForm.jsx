@@ -170,11 +170,25 @@ const RoundRegistrationForm = ({ hook, currentRound, currentRoundInfo, currentTo
             purchases += `/${mainRegistration.paymentType2} ${mainRegistration.paymentAmount2}`;
           }
         } else {
-          purchases = `${currentRoundInfo.name}`;
+          // No payment info, show default cost
+          let defaultCost = 0;
+          if (['rebuy1', 'rebuy2', 'superrebuy'].includes(currentRound)) {
+            defaultCost = currentTournament.rebuyCost || 500;
+          } else if (currentRound === 'round1') {
+            defaultCost = currentTournament.entryCost || 500;
+          }
+          purchases = `${currentRoundInfo.name} ${defaultCost}`;
         }
       } else {
         // Fallback
-        purchases = `${currentRoundInfo.name} ${mainRegistration.paymentAmount || 0}`;
+        // Determine the cost based on round type
+        let cost = 0;
+        if (['rebuy1', 'rebuy2', 'superrebuy'].includes(currentRound)) {
+          cost = currentTournament.rebuyCost || 500;
+        } else if (currentRound === 'round1') {
+          cost = currentTournament.entryCost || 500;
+        }
+        purchases = `${currentRoundInfo.name} ${mainRegistration.paymentAmount || cost}`;
       }
     } else {
       purchases = `Registered for ${currentRoundInfo.name}`;
@@ -184,7 +198,8 @@ const RoundRegistrationForm = ({ hook, currentRound, currentRoundInfo, currentTo
       if (mulliganRegistration.paymentType === 'Comp') {
         purchases += ` + COMP Mulligan`;
       } else {
-        purchases += ` + Mulligan ${mulliganRegistration.paymentType || 'Cash'} ${mulliganRegistration.paymentAmount}`;
+        const mulliganCost = mulliganRegistration.paymentAmount || currentTournament.mulliganCost || 100;
+        purchases += ` + Mulligan ${mulliganRegistration.paymentType || 'Cash'} ${mulliganCost}`;
         // Add second mulligan payment if it exists
         if (mulliganRegistration.paymentType2 && mulliganRegistration.paymentAmount2 > 0) {
           purchases += `/${mulliganRegistration.paymentType2} ${mulliganRegistration.paymentAmount2}`;
