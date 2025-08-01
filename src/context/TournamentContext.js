@@ -1,5 +1,6 @@
   import React, { createContext, useState, useContext, useCallback, useEffect } from 'react';
   import { useTournaments, useTournamentPlayers, useRegistrations, useDisabledTables } from '../hooks/useSupabaseData';
+  import { supabase } from '../lib/supabase';
 
   // 1. Create the Context
   const TournamentContext = createContext();
@@ -13,6 +14,7 @@
   export const TournamentProvider = ({ children }) => {
     // All the state that was in App.jsx now lives here
     const [selectedEvent, setSelectedEvent] = useState('');
+    const [realtimeConnected, setRealtimeConnected] = useState(false);
 
   // Debug logging for selectedEvent changes
   useEffect(() => {
@@ -79,6 +81,127 @@
     const registrationsApi = useRegistrations(selectedEvent);
     const disabledTablesApi = useDisabledTables(selectedEvent);
 
+    // Real-time subscriptions for live updates across all clients
+    useEffect(() => {
+      if (!selectedEvent) return;
+
+      console.log('Setting up real-time subscriptions for tournament:', selectedEvent);
+      
+      const setupSubscriptions = async () => {
+        // Get tournament ID for subscriptions
+        const { data: tournament } = await supabase
+          .from('tournaments')
+          .select('id')
+          .eq('name', selectedEvent)
+          .single();
+        
+        if (!tournament) {
+          console.log('No tournament found for real-time subscription');
+          return;
+        }
+
+        const channels = [];
+        setRealtimeConnected(true);
+
+        // 1. Subscribe to registration changes (most important for counter and seating)
+        const registrationsChannel = supabase
+          .channel(`registrations-context-${tournament.id}`)
+          .on(
+            'postgres_changes',
+            {
+              event: '*',
+              schema: 'public',
+              table: 'registrations',
+              filter: `tournament_id=eq.${tournament.id}`
+            },
+            async (payload) => {
+              console.log('Real-time registration update in context:', payload);
+              
+              // Reload registrations to get fresh data including counts
+              await registrationsApi.loadRegistrations(selectedEvent);
+              
+              // Show notification for other users' actions
+              if (payload.eventType === 'INSERT' && payload.new) {
+                const reg = payload.new;
+                if (reg.registered_by !== employee) {
+                  console.log(`New registration by another user: ${reg.first_name} ${reg.last_name}`);
+                }
+              }
+            }
+          )
+          .subscribe((status) => {
+            console.log('Registrations subscription status:', status);
+            if (status === 'SUBSCRIBED') {
+              console.log('Successfully subscribed to registration updates');
+            }
+          });
+        
+        channels.push(registrationsChannel);
+
+        // 2. Subscribe to player list changes
+        const playersChannel = supabase
+          .channel(`players-context-${tournament.id}`)
+          .on(
+            'postgres_changes',
+            {
+              event: '*',
+              schema: 'public',
+              table: 'tournament_players',
+              filter: `tournament_id=eq.${tournament.id}`
+            },
+            async (payload) => {
+              console.log('Real-time player update in context:', payload);
+              
+              // Reload players to get fresh data
+              await playersApi.loadPlayers(selectedEvent);
+            }
+          )
+          .subscribe();
+        
+        channels.push(playersChannel);
+
+        // 3. Subscribe to disabled tables changes
+        const disabledTablesChannel = supabase
+          .channel(`disabled-tables-context-${tournament.id}`)
+          .on(
+            'postgres_changes',
+            {
+              event: '*',
+              schema: 'public',
+              table: 'disabled_tables',
+              filter: `tournament_id=eq.${tournament.id}`
+            },
+            async (payload) => {
+              console.log('Real-time disabled tables update in context:', payload);
+              
+              // Reload disabled tables
+              await disabledTablesApi.loadDisabledTables(selectedEvent);
+            }
+          )
+          .subscribe();
+        
+        channels.push(disabledTablesChannel);
+
+        // Cleanup function
+        return () => {
+          console.log('Cleaning up real-time subscriptions in context');
+          setRealtimeConnected(false);
+          channels.forEach(channel => {
+            supabase.removeChannel(channel);
+          });
+        };
+      };
+
+      const cleanupPromise = setupSubscriptions();
+      
+      // Cleanup when selectedEvent changes or component unmounts
+      return () => {
+        cleanupPromise.then(cleanup => {
+          if (cleanup) cleanup();
+        });
+      };
+    }, [selectedEvent, employee, registrationsApi, playersApi, disabledTablesApi]);
+
     // FIXED: Use useCallback for context value to prevent unnecessary re-renders
     const contextValue = React.useMemo(() => ({
       // State
@@ -92,6 +215,7 @@
       lastRoundPreferences,
       persistentSearchData,
       globalDisabledTables: disabledTablesApi.disabledTables,
+      realtimeConnected,
       
       // Setters
       setSelectedEvent,

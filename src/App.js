@@ -12,6 +12,7 @@ import RegistrationPage from './components/pages/RegistrationPage';
 import SeatingAssignmentPage from './components/pages/SeatingAssignmentPage';
 import TablingManagement from './components/pages/TablingManagement';
 import ExportPage from './components/pages/ExportPage';
+import RealtimeStatus from './components/common/RealtimeStatus';
 import { Toaster } from 'react-hot-toast';
 
 // Debug environment variables
@@ -138,6 +139,8 @@ const App = () => {
           success: { duration: 2500 },
         }}
       />
+      
+      {selectedEvent && <RealtimeStatus />}
       
       <Routes>
         <Route path="/" element={<EventSelectionPage />} />
