@@ -192,12 +192,8 @@ const SeatingAssignmentPage = () => {
     );
     
     if (confirmed) {
-      // Remove the player's registrations
-      setRegistrations(prevRegistrations => {
-        return prevRegistrations.filter(r => 
-          !(pendingRegistration.registrations.some(pr => pr.id === r.id))
-        );
-      });
+      // Since registrations haven't been saved to database yet, 
+      // we just need to clear the pendingRegistration
       
       setPendingRegistration(null);
       toast.success('Registration cancelled. Player removed from tournament.');
@@ -317,62 +313,52 @@ const SeatingAssignmentPage = () => {
       console.log('currentPlayerRound:', currentPlayerRound);
       console.log('currentPlayerTimeSlot:', currentPlayerTimeSlot);
       console.log('selectedEvent:', selectedEvent);
-      console.log('Looking for registration with:', {
-        accountNumber: currentPlayer.playerAccountNumber,
-        round: currentPlayerRound,
-        eventName: selectedEvent
-      });
-      console.log('Total registrations to search:', registrations.length);
+      console.log('pendingRegistration:', pendingRegistration);
       
-      // Log first few registrations to debug
-      console.log('Sample registrations:', registrations.slice(0, 2).map(r => ({
-        accountNumber: r.accountNumber,
-        playerAccountNumber: r.playerAccountNumber,
-        round: r.round,
-        eventName: r.eventName,
-        firstName: r.firstName,
-        tableNumber: r.tableNumber,
-        seatNumber: r.seatNumber
-      })));
+      // Get the registrations from pendingRegistration
+      const pendingRegs = pendingRegistration?.registrations || [];
+      console.log('Pending registrations to save:', pendingRegs.length);
       
-      // Update registrations with seating information
-      let foundMatch = false;
-      const updatedRegistrations = registrations.map(reg => {
-        // Find the registration for this player in this round
-        const isMatchingReg = (
-          (reg.playerAccountNumber === currentPlayer.playerAccountNumber || 
-           reg.accountNumber === currentPlayer.playerAccountNumber) &&
-          reg.round === currentPlayerRound &&
-          reg.eventName === selectedEvent &&
-          !reg.mulligan && !reg.isMulligan
-        );
-        
-        if (isMatchingReg) {
-          foundMatch = true;
-          console.log('Found matching registration:', reg.firstName, reg.lastName, reg.id);
-          console.log('Setting tableNumber:', selectedSeat.table, 'seatNumber:', selectedSeat.seat);
-          return {
-            ...reg,
-            tableNumber: selectedSeat.table,
-            seatNumber: selectedSeat.seat,
-            timeSlot: currentPlayerTimeSlot,
-            // Ensure we have the correct account number field
-            playerAccountNumber: reg.playerAccountNumber || reg.accountNumber
-          };
-        }
-        return reg;
-      });
-      
-      if (!foundMatch) {
-        console.error('NO MATCHING REGISTRATION FOUND!');
-        console.log('Was looking for:', {
-          accountNumber: currentPlayer.playerAccountNumber,
-          round: currentPlayerRound,
-          eventName: selectedEvent
-        });
+      if (pendingRegs.length === 0) {
+        console.error('NO PENDING REGISTRATIONS FOUND!');
+        toast.error('No pending registrations found. Please go back and try again.');
+        setConfirming(false);
+        return;
       }
       
-      console.log('Updated registrations array:', updatedRegistrations.filter(r => r.playerAccountNumber === currentPlayer.playerAccountNumber));
+      // Update pending registrations with seat assignments
+      const registrationsWithSeating = pendingRegs.map(reg => ({
+        ...reg,
+        tableNumber: selectedSeat.table,
+        seatNumber: selectedSeat.seat,
+        timeSlot: currentPlayerTimeSlot
+      }));
+      
+      console.log('Registrations with seating:', registrationsWithSeating);
+      
+      // Check if we're updating existing registrations or adding new ones
+      let updatedRegistrations = [...registrations];
+      
+      registrationsWithSeating.forEach(regWithSeating => {
+        const existingIndex = updatedRegistrations.findIndex(r => 
+          r.id === regWithSeating.id ||
+          (r.playerAccountNumber === regWithSeating.playerAccountNumber && 
+           r.round === regWithSeating.round && 
+           r.isMulligan === regWithSeating.isMulligan)
+        );
+        
+        if (existingIndex >= 0) {
+          // Update existing registration
+          console.log('Updating existing registration at index:', existingIndex);
+          updatedRegistrations[existingIndex] = regWithSeating;
+        } else {
+          // Add new registration
+          console.log('Adding new registration');
+          updatedRegistrations.push(regWithSeating);
+        }
+      });
+      
+      console.log('Total registrations after update:', updatedRegistrations.length);
       console.log('Calling setRegistrations with updated data...');
       
       // Call setRegistrations which will persist to database
@@ -381,24 +367,16 @@ const SeatingAssignmentPage = () => {
       console.log('setRegistrations completed');
       
       // Record the assignment for undo functionality
-      if (foundMatch) {
-        const matchingReg = updatedRegistrations.find(reg => 
-          (reg.playerAccountNumber === currentPlayer.playerAccountNumber || 
-           reg.accountNumber === currentPlayer.playerAccountNumber) &&
-          reg.round === currentPlayerRound &&
-          !reg.mulligan && !reg.isMulligan
+      const mainRegistration = registrationsWithSeating.find(reg => !reg.isMulligan);
+      if (mainRegistration && mainRegistration.id) {
+        await recordAssignment(
+          mainRegistration.id,
+          currentPlayerRound,
+          currentPlayerTimeSlot,
+          null, // No previous seat for new assignments
+          { table: selectedSeat.table, seat: selectedSeat.seat },
+          employee
         );
-        
-        if (matchingReg && matchingReg.id) {
-          await recordAssignment(
-            matchingReg.id,
-            currentPlayerRound,
-            currentPlayerTimeSlot,
-            null, // No previous seat for new assignments
-            { table: selectedSeat.table, seat: selectedSeat.seat },
-            employee
-          );
-        }
       }
       
       // Set lastRegisteredPlayer since seating is complete
