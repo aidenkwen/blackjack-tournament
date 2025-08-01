@@ -531,9 +531,9 @@ export const useRegistrations = (selectedEvent) => {
           entry_type: registration.entryType || 'PAY',
           registered_by: registration.registeredBy || null,
           payment_type: registration.paymentType || null,
-          payment_amount: registration.paymentAmount || 0,
+          payment_amount: parseFloat(registration.paymentAmount) || 0,
           payment_type2: registration.paymentType2 || null,
-          payment_amount2: registration.paymentAmount2 || 0,
+          payment_amount2: parseFloat(registration.paymentAmount2) || 0,
           comments: registration.comments || registration.comment || null
         }])
         .select()
@@ -653,9 +653,9 @@ export const useRegistrations = (selectedEvent) => {
             entry_type: reg.entryType || 'PAY',
             registered_by: reg.employee || reg.registeredBy,
             payment_type: reg.paymentType,
-            payment_amount: reg.paymentAmount || 0,
+            payment_amount: parseFloat(reg.paymentAmount) || 0,
             payment_type2: reg.paymentType2,
-            payment_amount2: reg.paymentAmount2 || 0,
+            payment_amount2: parseFloat(reg.paymentAmount2) || 0,
             comments: reg.comments || reg.comment
           };
           
@@ -699,9 +699,9 @@ export const useRegistrations = (selectedEvent) => {
               entry_type: reg.entryType || 'PAY',
               registered_by: reg.employee || reg.registeredBy,
               payment_type: reg.paymentType,
-              payment_amount: reg.paymentAmount || 0,
+              payment_amount: parseFloat(reg.paymentAmount) || 0,
               payment_type2: reg.paymentType2,
-              payment_amount2: reg.paymentAmount2 || 0,
+              payment_amount2: parseFloat(reg.paymentAmount2) || 0,
               comments: reg.comments || reg.comment
             }]);
           
