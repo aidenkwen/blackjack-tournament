@@ -167,16 +167,31 @@ const SeatingAssignmentPage = () => {
     
     try {
       console.log('=== SEATING ASSIGNMENT DEBUG ===');
-      console.log('selectedSeat:', selectedSeat);
-      console.log('pendingRegistration:', pendingRegistration);
+      console.log('selectedSeat:', JSON.stringify(selectedSeat));
+      console.log('currentPlayer:', JSON.stringify(currentPlayer));
+      console.log('currentPlayerRound:', currentPlayerRound);
       console.log('currentPlayerTimeSlot:', currentPlayerTimeSlot);
+      console.log('selectedEvent:', selectedEvent);
       console.log('Looking for registration with:', {
         accountNumber: currentPlayer.playerAccountNumber,
         round: currentPlayerRound,
         eventName: selectedEvent
       });
+      console.log('Total registrations to search:', registrations.length);
+      
+      // Log first few registrations to debug
+      console.log('Sample registrations:', registrations.slice(0, 2).map(r => ({
+        accountNumber: r.accountNumber,
+        playerAccountNumber: r.playerAccountNumber,
+        round: r.round,
+        eventName: r.eventName,
+        firstName: r.firstName,
+        tableNumber: r.tableNumber,
+        seatNumber: r.seatNumber
+      })));
       
       // Update registrations with seating information
+      let foundMatch = false;
       const updatedRegistrations = registrations.map(reg => {
         // Find the registration for this player in this round
         const isMatchingReg = (
@@ -188,6 +203,7 @@ const SeatingAssignmentPage = () => {
         );
         
         if (isMatchingReg) {
+          foundMatch = true;
           console.log('Found matching registration:', reg.firstName, reg.lastName, reg.id);
           console.log('Setting tableNumber:', selectedSeat.table, 'seatNumber:', selectedSeat.seat);
           return {
@@ -201,6 +217,15 @@ const SeatingAssignmentPage = () => {
         }
         return reg;
       });
+      
+      if (!foundMatch) {
+        console.error('NO MATCHING REGISTRATION FOUND!');
+        console.log('Was looking for:', {
+          accountNumber: currentPlayer.playerAccountNumber,
+          round: currentPlayerRound,
+          eventName: selectedEvent
+        });
+      }
       
       // Call setRegistrations which will persist to database
       await setRegistrations(updatedRegistrations);
