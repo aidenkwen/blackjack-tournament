@@ -227,8 +227,13 @@ const SeatingAssignmentPage = () => {
         });
       }
       
+      console.log('Updated registrations array:', updatedRegistrations.filter(r => r.playerAccountNumber === currentPlayer.playerAccountNumber));
+      console.log('Calling setRegistrations with updated data...');
+      
       // Call setRegistrations which will persist to database
       await setRegistrations(updatedRegistrations);
+      
+      console.log('setRegistrations completed');
       
       // Set lastRegisteredPlayer since seating is complete
       setLastRegisteredPlayer({

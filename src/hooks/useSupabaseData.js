@@ -430,6 +430,19 @@ export const useRegistrations = (selectedEvent) => {
       
       if (error) throw error;
       
+      console.log('=== LOAD REGISTRATIONS ===');
+      console.log('Raw data from database:', (data || []).length, 'registrations');
+      if (data && data.length > 0) {
+        console.log('Sample raw registration:', {
+          id: data[0].id,
+          first_name: data[0].first_name,
+          last_name: data[0].last_name,
+          table_number: data[0].table_number,
+          seat_number: data[0].seat_number,
+          round: data[0].round
+        });
+      }
+      
       // Transform data to match expected format
       const transformedData = (data || []).map(reg => ({
         ...reg,
@@ -451,6 +464,13 @@ export const useRegistrations = (selectedEvent) => {
         comments: reg.comments,
         isMulligan: reg.mulligan
       }));
+      
+      console.log('Transformed registrations with seating:', transformedData.filter(r => r.tableNumber !== null).map(r => ({
+        name: `${r.firstName} ${r.lastName}`,
+        table: r.tableNumber,
+        seat: r.seatNumber,
+        round: r.round
+      })));
       
       setRegistrations(transformedData);
       return transformedData;
@@ -576,10 +596,24 @@ export const useRegistrations = (selectedEvent) => {
         return;
       }
       
+      console.log('=== UPDATE REGISTRATIONS START ===');
       console.log('About to process registrations:', updatedRegistrations.length);
+      console.log('Selected event:', selectedEvent);
+      console.log('Tournament ID:', tournament.id);
       
       // Process each registration - either insert new ones or update existing ones
+      const updatePromises = [];
       for (const reg of updatedRegistrations) {
+        console.log('\nProcessing registration:', {
+          firstName: reg.firstName,
+          lastName: reg.lastName,
+          accountNumber: reg.playerAccountNumber || reg.accountNumber,
+          round: reg.round,
+          tableNumber: reg.tableNumber,
+          seatNumber: reg.seatNumber,
+          timeSlot: reg.timeSlot,
+          isMulligan: reg.isMulligan || false
+        });
         // Check if this registration exists in the database
         const { data: existingReg, error: fetchError } = await supabase
           .from('registrations')
@@ -597,39 +631,47 @@ export const useRegistrations = (selectedEvent) => {
         
         if (existingReg) {
           // Update existing registration
-          console.log('Updating existing registration:', existingReg.id);
-          console.log('Seating data being updated:', 
-            'tableNumber:', reg.tableNumber,
-            'seatNumber:', reg.seatNumber,
-            'timeSlot:', reg.timeSlot,
-            'reg object:', JSON.stringify(reg, null, 2)
-          );
-          const { error: updateError } = await supabase
+          console.log('Found existing registration in DB:', existingReg.id);
+          console.log('Seating data being updated:', {
+            table_number: reg.tableNumber,
+            seat_number: reg.seatNumber,
+            time_slot: reg.timeSlot,
+            full_reg: JSON.stringify(reg, null, 2)
+          });
+          
+          const updatePayload = {
+            first_name: reg.firstName,
+            last_name: reg.lastName,
+            account_number: reg.playerAccountNumber || reg.accountNumber,
+            round: reg.round,
+            time_slot: reg.timeSlot,
+            table_number: reg.tableNumber,
+            seat_number: reg.seatNumber,
+            host: reg.host,
+            mulligan: reg.isMulligan || reg.mulligan || false,
+            last_player: reg.lastPlayer || false,
+            entry_type: reg.entryType || 'PAY',
+            registered_by: reg.employee || reg.registeredBy,
+            payment_type: reg.paymentType,
+            payment_amount: reg.paymentAmount || 0,
+            payment_type2: reg.paymentType2,
+            payment_amount2: reg.paymentAmount2 || 0,
+            comments: reg.comments || reg.comment
+          };
+          
+          console.log('UPDATE PAYLOAD:', JSON.stringify(updatePayload, null, 2));
+          const { data: updateData, error: updateError } = await supabase
             .from('registrations')
-            .update({
-              first_name: reg.firstName,
-              last_name: reg.lastName,
-              account_number: reg.playerAccountNumber || reg.accountNumber,
-              round: reg.round,
-              time_slot: reg.timeSlot,
-              table_number: reg.tableNumber,
-              seat_number: reg.seatNumber,
-              host: reg.host,
-              mulligan: reg.isMulligan || reg.mulligan || false,
-              last_player: reg.lastPlayer || false,
-              entry_type: reg.entryType || 'PAY',
-              registered_by: reg.employee || reg.registeredBy,
-              payment_type: reg.paymentType,
-              payment_amount: reg.paymentAmount || 0,
-              payment_type2: reg.paymentType2,
-              payment_amount2: reg.paymentAmount2 || 0,
-              comments: reg.comments || reg.comment
-            })
-            .eq('id', existingReg.id);
+            .update(updatePayload)
+            .eq('id', existingReg.id)
+            .select();
           
           if (updateError) {
             console.error('Error updating registration:', updateError);
+            console.error('Failed update payload:', updatePayload);
             throw updateError;
+          } else {
+            console.log('Update successful! Returned data:', updateData);
           }
         } else {
           // Insert new registration
@@ -671,7 +713,10 @@ export const useRegistrations = (selectedEvent) => {
       }
       
       // Reload registrations from database to get the latest data
-      await loadRegistrations(selectedEvent);
+      console.log('\\n=== RELOADING REGISTRATIONS AFTER UPDATE ===');
+      const reloadedData = await loadRegistrations(selectedEvent);
+      console.log('Reloaded data includes seating assignments:', reloadedData.filter(r => r.tableNumber !== null).length);
+      console.log('=== UPDATE REGISTRATIONS END ===\\n');
     } catch (err) {
       const errorMessage = handleSupabaseError(err);
       setError(errorMessage);
