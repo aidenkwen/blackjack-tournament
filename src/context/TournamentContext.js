@@ -82,6 +82,27 @@
     const registrationsApi = useRegistrations(selectedEvent);
     const disabledTablesApi = useDisabledTables(selectedEvent);
 
+    // Manual polling fallback when real-time is not available
+    useEffect(() => {
+      if (!selectedEvent || realtimeConnected) return;
+      
+      // Poll every 3 seconds when in offline mode
+      const pollInterval = setInterval(async () => {
+        if (connectionStatus === 'error') {
+          console.log('Polling for updates (offline mode)');
+          try {
+            await registrationsApi.loadRegistrations(selectedEvent);
+            await playersApi.loadPlayers(selectedEvent);
+            await disabledTablesApi.loadDisabledTables(selectedEvent);
+          } catch (error) {
+            console.error('Polling error:', error);
+          }
+        }
+      }, 3000);
+      
+      return () => clearInterval(pollInterval);
+    }, [selectedEvent, realtimeConnected, connectionStatus, registrationsApi, playersApi, disabledTablesApi]);
+
     // Real-time subscriptions for live updates across all clients
     useEffect(() => {
       if (!selectedEvent) return;
@@ -89,23 +110,70 @@
       console.log('Setting up real-time subscriptions for tournament:', selectedEvent);
       
       const setupSubscriptions = async () => {
-        // Get tournament ID for subscriptions
-        const { data: tournament } = await supabase
-          .from('tournaments')
-          .select('id')
-          .eq('name', selectedEvent)
-          .single();
-        
-        if (!tournament) {
-          console.log('No tournament found for real-time subscription');
-          return;
-        }
+        try {
+          // First, test if real-time is available at all
+          const testChannel = supabase.channel('test-connection');
+          const testPromise = new Promise((resolve) => {
+            testChannel.subscribe((status) => {
+              console.log('Test channel status:', status);
+              if (status === 'SUBSCRIBED') {
+                console.log('Real-time is available!');
+                supabase.removeChannel(testChannel);
+                resolve(true);
+              } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+                console.error('Real-time test failed:', status);
+                supabase.removeChannel(testChannel);
+                resolve(false);
+              }
+            });
+          });
+          
+          // Wait up to 3 seconds for test
+          const realtimeAvailable = await Promise.race([
+            testPromise,
+            new Promise(resolve => setTimeout(() => resolve(false), 3000))
+          ]);
+          
+          if (!realtimeAvailable) {
+            console.error('Real-time connection test failed - falling back to offline mode');
+            setConnectionStatus('error');
+            setRealtimeConnected(false);
+            return;
+          }
+          
+          // Get tournament ID for subscriptions
+          const { data: tournament, error: tournamentError } = await supabase
+            .from('tournaments')
+            .select('id')
+            .eq('name', selectedEvent)
+            .single();
+          
+          if (tournamentError) {
+            console.error('Error fetching tournament for real-time:', tournamentError);
+            setConnectionStatus('error');
+            return;
+          }
+          
+          if (!tournament) {
+            console.log('No tournament found for real-time subscription');
+            setConnectionStatus('error');
+            return;
+          }
 
         const channels = [];
         let connectionStable = false;
         
         // Set initial connecting status
         setConnectionStatus('connecting');
+        
+        // Timeout to switch to offline mode if connection fails
+        const connectionTimeout = setTimeout(() => {
+          if (!connectionStable) {
+            console.log('Real-time connection timeout - switching to offline mode');
+            setConnectionStatus('error');
+            setRealtimeConnected(false);
+          }
+        }, 10000); // 10 second timeout
 
         // 1. Subscribe to registration changes (most important for counter and seating)
         const registrationsChannel = supabase
@@ -133,16 +201,33 @@
               }
             }
           )
-          .subscribe((status) => {
-            console.log('Registrations subscription status:', status);
+          .subscribe((status, error) => {
+            console.log('Registrations channel subscription attempt:', status);
+            if (error) {
+              console.error('Channel subscription error:', error);
+            }
+            
             if (status === 'SUBSCRIBED') {
               console.log('Successfully subscribed to registration updates');
+              
+              // Clear timeout and mark as connected
               if (!connectionStable) {
                 connectionStable = true;
+                clearTimeout(connectionTimeout);
                 setRealtimeConnected(true);
                 setConnectionStatus('connected');
+                console.log('Real-time connection established');
               }
+            } else if (status === 'CLOSED') {
+              console.log('Channel closed');
+              setConnectionStatus('error');
+              setRealtimeConnected(false);
             } else if (status === 'CHANNEL_ERROR') {
+              console.error('Channel error occurred');
+              setConnectionStatus('error');
+              setRealtimeConnected(false);
+            } else if (status === 'TIMED_OUT') {
+              console.error('Channel subscription timed out');
               setConnectionStatus('error');
               setRealtimeConnected(false);
             }
@@ -204,6 +289,11 @@
             supabase.removeChannel(channel);
           });
         };
+        } catch (error) {
+          console.error('Error setting up real-time subscriptions:', error);
+          setConnectionStatus('error');
+          setRealtimeConnected(false);
+        }
       };
 
       const cleanupPromise = setupSubscriptions();

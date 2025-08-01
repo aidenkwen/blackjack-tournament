@@ -14,7 +14,17 @@ console.log('- Key first 20 chars:', SUPABASE_ANON_KEY.substring(0, 20));
 console.log('- Key last 20 chars:', SUPABASE_ANON_KEY.substring(SUPABASE_ANON_KEY.length - 20));
 
 // Test the connection immediately
-export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  realtime: {
+    params: {
+      eventsPerSecond: 10
+    }
+  },
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true
+  }
+});
 
 // Helper function to handle Supabase errors
 export const handleSupabaseError = (error) => {

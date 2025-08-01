@@ -39,30 +39,42 @@ const RealtimeStatus = () => {
   const getStatusText = () => {
     switch (connectionStatus) {
       case 'connected': return 'Live Updates Active';
-      case 'error': return 'Connection Error';
+      case 'error': return 'Offline Mode (Auto-Refresh Active)';
       default: return 'Connecting...';
     }
   };
   
+  const handleClick = () => {
+    if (connectionStatus === 'error') {
+      // Refresh the page to retry connection
+      window.location.reload();
+    }
+  };
+  
   return (
-    <div style={{
-      position: 'fixed',
-      bottom: '20px',
-      right: '20px',
-      padding: '8px 16px',
-      backgroundColor: getStatusColor(),
-      color: 'white',
-      borderRadius: '20px',
-      fontSize: '12px',
-      display: 'flex',
-      alignItems: 'center',
-      gap: '8px',
-      boxShadow: '0 2px 10px rgba(0,0,0,0.2)',
-      zIndex: 1000,
-      transition: 'all 0.3s ease',
-      opacity: isVisible ? 1 : 0,
-      transform: `translateY(${isVisible ? '0' : '20px'})`
-    }}>
+    <div 
+      onClick={handleClick}
+      style={{
+        position: 'fixed',
+        bottom: '20px',
+        right: '20px',
+        padding: '8px 16px',
+        backgroundColor: getStatusColor(),
+        color: 'white',
+        borderRadius: '20px',
+        fontSize: '12px',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px',
+        boxShadow: '0 2px 10px rgba(0,0,0,0.2)',
+        zIndex: 1000,
+        transition: 'all 0.3s ease',
+        opacity: isVisible ? 1 : 0,
+        transform: `translateY(${isVisible ? '0' : '20px'})`,
+        cursor: connectionStatus === 'error' ? 'pointer' : 'default',
+        userSelect: 'none'
+      }}
+      title={connectionStatus === 'error' ? 'Click to refresh and retry connection' : ''}>
       <div style={{
         width: '8px',
         height: '8px',
