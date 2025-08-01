@@ -170,13 +170,25 @@ const SeatingAssignmentPage = () => {
       console.log('selectedSeat:', selectedSeat);
       console.log('pendingRegistration:', pendingRegistration);
       console.log('currentPlayerTimeSlot:', currentPlayerTimeSlot);
+      console.log('Looking for registration with:', {
+        accountNumber: currentPlayer.playerAccountNumber,
+        round: currentPlayerRound,
+        eventName: selectedEvent
+      });
       
       // Update registrations with seating information
       const updatedRegistrations = registrations.map(reg => {
-        // Find the pending registrations and assign seating
-        const isPendingReg = pendingRegistration.registrations.some(pr => pr.id === reg.id);
-        if (isPendingReg) {
-          console.log('Updating registration for seating:', reg.firstName, reg.lastName);
+        // Find the registration for this player in this round
+        const isMatchingReg = (
+          (reg.playerAccountNumber === currentPlayer.playerAccountNumber || 
+           reg.accountNumber === currentPlayer.playerAccountNumber) &&
+          reg.round === currentPlayerRound &&
+          reg.eventName === selectedEvent &&
+          !reg.mulligan && !reg.isMulligan
+        );
+        
+        if (isMatchingReg) {
+          console.log('Found matching registration:', reg.firstName, reg.lastName, reg.id);
           console.log('Setting tableNumber:', selectedSeat.table, 'seatNumber:', selectedSeat.seat);
           return {
             ...reg,
