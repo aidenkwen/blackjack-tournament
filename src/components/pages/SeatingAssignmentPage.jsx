@@ -171,6 +171,19 @@ const SeatingAssignmentPage = () => {
     return slots[slotNumber - 1] || `Slot ${slotNumber}`;
   };
 
+  // Extract values from pending registration (they might be undefined)
+  const currentPlayerRound = pendingRegistration?.selectedRound;
+  const currentPlayerTimeSlot = pendingRegistration?.selectedTimeSlot;
+  const currentPlayer = pendingRegistration?.player;
+
+  // Load coordination note when round/timeslot changes - must be before early return
+  useEffect(() => {
+    if (currentPlayerRound && currentPlayerTimeSlot) {
+      const note = getNote(currentPlayerRound, currentPlayerTimeSlot);
+      setCoordinationNote(note);
+    }
+  }, [currentPlayerRound, currentPlayerTimeSlot, getNote]);
+  
   if (!pendingRegistration) {
     return (
       <div className="container">
@@ -182,11 +195,6 @@ const SeatingAssignmentPage = () => {
       </div>
     );
   }
-  
-  // FIXED: Use pendingRegistration data instead of lastRegisteredPlayer
-  const currentPlayerRound = pendingRegistration.selectedRound;
-  const currentPlayerTimeSlot = pendingRegistration.selectedTimeSlot;
-  const currentPlayer = pendingRegistration.player;
   
   const handleBack = () => {
     const confirmed = window.confirm(
@@ -210,14 +218,6 @@ const SeatingAssignmentPage = () => {
 
   const currentRound = rounds.find(r => r.key === currentPlayerRound);
   const timeSlotName = getTimeSlotName(currentPlayerRound, currentPlayerTimeSlot);
-  
-  // Load coordination note when round/timeslot changes
-  useEffect(() => {
-    if (currentPlayerRound && currentPlayerTimeSlot) {
-      const note = getNote(currentPlayerRound, currentPlayerTimeSlot);
-      setCoordinationNote(note);
-    }
-  }, [currentPlayerRound, currentPlayerTimeSlot, getNote]);
   const getDisabledKey = (round, timeSlot, tableNumber) => `${selectedEvent}-${round}-${timeSlot}-${tableNumber}`;
   const isTableConflicted = (tableNumber) => conflictTables.has(tableNumber);
   const isTableDisabled = (tableNumber) => {
