@@ -45,10 +45,8 @@ const RealtimeStatus = () => {
   };
   
   const handleClick = () => {
-    if (connectionStatus === 'error') {
-      // Refresh the page to retry connection
-      window.location.reload();
-    }
+    // Disabled - refresh loses event context
+    return;
   };
   
   return (
@@ -71,10 +69,9 @@ const RealtimeStatus = () => {
         transition: 'all 0.3s ease',
         opacity: isVisible ? 1 : 0,
         transform: `translateY(${isVisible ? '0' : '20px'})`,
-        cursor: connectionStatus === 'error' ? 'pointer' : 'default',
+        cursor: 'default',
         userSelect: 'none'
-      }}
-      title={connectionStatus === 'error' ? 'Click to refresh and retry connection' : ''}>
+      }}>
       <div style={{
         width: '8px',
         height: '8px',
