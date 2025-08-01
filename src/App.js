@@ -81,7 +81,7 @@ class ErrorBoundary extends React.Component {
 
 const App = () => {
   // Get only what's needed for error checking from the context
-  const { tournamentsError, playersError, registrationsError } = useTournamentContext();
+  const { tournamentsError, playersError, registrationsError, selectedEvent } = useTournamentContext();
 
   // FIXED: Better error handling with more detailed error messages
   const hasApiError = tournamentsError || playersError || registrationsError;
