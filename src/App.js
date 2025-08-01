@@ -1,3 +1,4 @@
+// Deployment: 2024-08-01 22:45 - Seating persistence fix included
 import React from 'react';
 import './Blackjack.css';
 import { Routes, Route } from 'react-router-dom';
