@@ -1,3 +1,4 @@
+// Seating persistence fix - deployed version
 import { useState, useEffect, useCallback } from 'react';
 import Papa from 'papaparse';
 import { supabase, handleSupabaseError } from '../lib/supabase';
