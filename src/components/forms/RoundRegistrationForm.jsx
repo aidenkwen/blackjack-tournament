@@ -149,12 +149,26 @@ const RoundRegistrationForm = ({ hook, currentRound, currentRoundInfo, currentTo
     
     // Find all registrations for this player in this round
     const playerRegistrations = allRegistrations?.filter(r => 
-      r.playerAccountNumber === lastRegisteredPlayer.playerAccountNumber && 
+      (r.playerAccountNumber === lastRegisteredPlayer.playerAccountNumber || 
+       r.accountNumber === lastRegisteredPlayer.playerAccountNumber) && 
       r.round === lastRegisteredPlayer.round
     ) || [];
     
     const mainRegistration = playerRegistrations.find(r => !r.isMulligan);
     const mulliganRegistration = playerRegistrations.find(r => r.isMulligan);
+    
+    console.log('LastPlayerCard debug:', {
+      lastRegisteredPlayer,
+      allRegistrationsCount: allRegistrations?.length,
+      playerRegistrations,
+      mainRegistration,
+      mulliganRegistration,
+      mulliganCheck: playerRegistrations.map(r => ({ 
+        name: `${r.firstName} ${r.lastName}`, 
+        isMulligan: r.isMulligan,
+        mulligan: r.mulligan 
+      }))
+    });
     
     // SIMPLIFIED: Build purchases string using new eventType logic
     let purchases = '';
