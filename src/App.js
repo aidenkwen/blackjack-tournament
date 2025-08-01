@@ -4,6 +4,12 @@ import './Blackjack.css';
 import { Routes, Route } from 'react-router-dom';
 import { useTournamentContext } from './context/TournamentContext';
 
+// Debug environment variables
+console.log('=== ENVIRONMENT DEBUG ===');
+console.log('NODE_ENV:', process.env.NODE_ENV);
+console.log('REACT_APP_SUPABASE_URL:', process.env.REACT_APP_SUPABASE_URL);
+console.log('REACT_APP_SUPABASE_ANON_KEY exists:', process.env.REACT_APP_SUPABASE_ANON_KEY ? 'Yes' : 'No');
+
 // Import Page Components
 import EventSelectionPage from './components/pages/EventSelectionPage';
 import AddTournamentPage from './components/pages/AddTournamentPage';
