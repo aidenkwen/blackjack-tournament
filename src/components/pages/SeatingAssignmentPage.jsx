@@ -158,22 +158,21 @@ const SeatingAssignmentPage = () => {
     setSelectedSeat({ table: tableNumber, seat: seatNumber });
   };
   
-  const confirmAssignment = () => { 
+  const confirmAssignment = async () => { 
     if (!selectedSeat) { 
       toast.error('Please select a seat first.'); 
       return; 
     } 
     setConfirming(true); 
     
-    console.log('=== SEATING ASSIGNMENT DEBUG ===');
-    console.log('selectedSeat:', selectedSeat);
-    console.log('pendingRegistration:', pendingRegistration);
-    console.log('currentPlayerTimeSlot:', currentPlayerTimeSlot);
-    
-    // FIXED: Update registrations by mapping over existing ones instead of adding duplicates
-    setRegistrations(prevRegistrations => {
-      console.log('prevRegistrations length:', prevRegistrations.length);
-      const updatedRegs = prevRegistrations.map(reg => {
+    try {
+      console.log('=== SEATING ASSIGNMENT DEBUG ===');
+      console.log('selectedSeat:', selectedSeat);
+      console.log('pendingRegistration:', pendingRegistration);
+      console.log('currentPlayerTimeSlot:', currentPlayerTimeSlot);
+      
+      // Update registrations with seating information
+      const updatedRegistrations = registrations.map(reg => {
         // Find the pending registrations and assign seating
         const isPendingReg = pendingRegistration.registrations.some(pr => pr.id === reg.id);
         if (isPendingReg) {
@@ -183,27 +182,34 @@ const SeatingAssignmentPage = () => {
             ...reg,
             tableNumber: selectedSeat.table,
             seatNumber: selectedSeat.seat,
-            timeSlot: currentPlayerTimeSlot
+            timeSlot: currentPlayerTimeSlot,
+            // Ensure we have the correct account number field
+            playerAccountNumber: reg.playerAccountNumber || reg.accountNumber
           };
         }
         return reg;
       });
-      console.log('Updated registrations length:', updatedRegs.length);
-      return updatedRegs;
-    });
-    
-    // FIXED: Now set lastRegisteredPlayer since seating is complete
-    setLastRegisteredPlayer({
-      playerAccountNumber: currentPlayer.playerAccountNumber,
-      firstName: currentPlayer.firstName,
-      lastName: currentPlayer.lastName,
-      round: currentPlayerRound,
-      timeSlot: currentPlayerTimeSlot
-    });
-    
-    toast.success(`${currentPlayer.firstName} assigned to Table ${selectedSeat.table}, Seat ${selectedSeat.seat}`); 
-    setPendingRegistration(null); 
-    navigate('/register'); 
+      
+      // Call setRegistrations which will persist to database
+      await setRegistrations(updatedRegistrations);
+      
+      // Set lastRegisteredPlayer since seating is complete
+      setLastRegisteredPlayer({
+        playerAccountNumber: currentPlayer.playerAccountNumber,
+        firstName: currentPlayer.firstName,
+        lastName: currentPlayer.lastName,
+        round: currentPlayerRound,
+        timeSlot: currentPlayerTimeSlot
+      });
+      
+      toast.success(`${currentPlayer.firstName} assigned to Table ${selectedSeat.table}, Seat ${selectedSeat.seat}`); 
+      setPendingRegistration(null); 
+      navigate('/register');
+    } catch (error) {
+      console.error('Error saving seating assignment:', error);
+      toast.error('Failed to save seating assignment. Please try again.');
+      setConfirming(false);
+    }
   };
 
   return (

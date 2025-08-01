@@ -157,7 +157,7 @@ const PlayerSeatEdit = ({
     setSelectedSeatInModal({ table: tableNumber, seat: seatNumber });
   };
 
-  const handleConfirmSeat = () => {
+  const handleConfirmSeat = async () => {
     if (!selectedPlayerInModal || !selectedSeatInModal) return;
     
     const { table: newTable, seat: newSeat } = selectedSeatInModal;
@@ -176,8 +176,9 @@ const PlayerSeatEdit = ({
     const confirmed = window.confirm(confirmMessage);
     
     if (confirmed) {
-      setRegistrations(prevRegistrations => {
-        return prevRegistrations.map(r => {
+      try {
+        // Update registrations with new seating
+        const updatedRegistrations = registrations.map(r => {
           if (r.playerAccountNumber === playerAccountNumber && 
               r.round === playerRound && 
               !r.isMulligan) {
@@ -197,26 +198,33 @@ const PlayerSeatEdit = ({
           }
           return r;
         });
-      });
-      
-      setPlayerRegistrations(prevRegs => 
-        prevRegs.map(reg => 
-          reg.playerAccountNumber === playerAccountNumber && reg.round === playerRound && !reg.isMulligan
-            ? { ...reg, tableNumber: newTable, seatNumber: newSeat, timeSlot: modalSelectedTimeSlot }
-            : reg
-        )
-      );
-      
-      setSelectedPlayerInModal(null);
-      setPlayerNeedsReseating(false);
-      setSelectedSeatInModal(null);
-      setShowSeatingModal(false);
-      
-      toast.success(`${selectedPlayerInModal.firstName} moved successfully.`);
+        
+        // Persist to database
+        await setRegistrations(updatedRegistrations);
+        
+        // Update local state
+        setPlayerRegistrations(prevRegs => 
+          prevRegs.map(reg => 
+            reg.playerAccountNumber === playerAccountNumber && reg.round === playerRound && !reg.isMulligan
+              ? { ...reg, tableNumber: newTable, seatNumber: newSeat, timeSlot: modalSelectedTimeSlot }
+              : reg
+          )
+        );
+        
+        setSelectedPlayerInModal(null);
+        setPlayerNeedsReseating(false);
+        setSelectedSeatInModal(null);
+        setShowSeatingModal(false);
+        
+        toast.success(`${selectedPlayerInModal.firstName} moved successfully.`);
+      } catch (error) {
+        console.error('Error saving seat assignment:', error);
+        toast.error('Failed to save seat assignment. Please try again.');
+      }
     }
   };
 
-  const handleTimeSlotChange = (newTimeSlot) => {
+  const handleTimeSlotChange = async (newTimeSlot) => {
     if (!selectedPlayerInModal) return;
     
     const newTimeSlotInt = parseInt(newTimeSlot);
@@ -233,8 +241,9 @@ const PlayerSeatEdit = ({
     );
     
     if (confirmed) {
-      setRegistrations(prevRegistrations => {
-        return prevRegistrations.map(r => {
+      try {
+        // Update registrations with new time slot and clear seating
+        const updatedRegistrations = registrations.map(r => {
           if (r.playerAccountNumber === selectedPlayerInModal.playerAccountNumber && 
               r.round === selectedPlayerInModal.round && 
               !r.isMulligan) {
@@ -247,18 +256,26 @@ const PlayerSeatEdit = ({
           }
           return r;
         });
-      });
-      
-      setModalSelectedTimeSlot(newTimeSlotInt);
-      setModalTimeSlot(newTimeSlotInt);
-      setPlayerNeedsReseating(true);
-      setSelectedSeatInModal(null);
-      
-      const updatedPlayer = { ...selectedPlayerInModal, timeSlot: newTimeSlotInt, tableNumber: null, seatNumber: null };
-      setSelectedPlayerInModal(updatedPlayer);
-      setPlayerRegistrations([updatedPlayer]);
-      
-      toast.success(`${selectedPlayerInModal.firstName} moved to ${newTimeSlotName}.`);
+        
+        // Persist to database
+        await setRegistrations(updatedRegistrations);
+        
+        // Update modal states
+        setModalSelectedTimeSlot(newTimeSlotInt);
+        setModalTimeSlot(newTimeSlotInt);
+        setPlayerNeedsReseating(true);
+        setSelectedSeatInModal(null);
+        
+        // Update local state
+        const updatedPlayer = { ...selectedPlayerInModal, timeSlot: newTimeSlotInt, tableNumber: null, seatNumber: null };
+        setSelectedPlayerInModal(updatedPlayer);
+        setPlayerRegistrations([updatedPlayer]);
+        
+        toast.success(`${selectedPlayerInModal.firstName} moved to ${newTimeSlotName}.`);
+      } catch (error) {
+        console.error('Error updating time slot:', error);
+        toast.error('Failed to update time slot. Please try again.');
+      }
     }
   };
 

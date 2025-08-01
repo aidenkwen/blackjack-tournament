@@ -437,10 +437,12 @@ export const useRegistrations = (selectedEvent) => {
         firstName: reg.first_name,
         lastName: reg.last_name,
         tableNumber: reg.table_number,
+        seatNumber: reg.seat_number,
         timeSlot: reg.time_slot,
         entryType: reg.entry_type,
         registeredBy: reg.registered_by,
-        createdAt: reg.created_at
+        createdAt: reg.created_at,
+        playerAccountNumber: reg.account_number // Add this for consistency
       }));
       
       setRegistrations(transformedData);
@@ -495,6 +497,7 @@ export const useRegistrations = (selectedEvent) => {
           round: registration.round,
           time_slot: registration.timeSlot,
           table_number: registration.tableNumber,
+          seat_number: registration.seatNumber,
           host: registration.host || null,
           mulligan: registration.mulligan || false,
           last_player: registration.lastPlayer || false,
@@ -513,6 +516,7 @@ export const useRegistrations = (selectedEvent) => {
         firstName: data.first_name,
         lastName: data.last_name,
         tableNumber: data.table_number,
+        seatNumber: data.seat_number,
         timeSlot: data.time_slot,
         entryType: data.entry_type,
         registeredBy: data.registered_by,
