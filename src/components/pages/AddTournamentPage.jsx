@@ -71,15 +71,18 @@ const AddTournamentPage = () => {
       // Small delay to ensure state updates propagate
       await new Promise(resolve => setTimeout(resolve, 100));
       
-      console.log('About to upload players file:', { tournamentName: tournamentName.trim(), selectedFile });
-      console.log('uploadPlayersFile function:', uploadPlayersFile);
-      
-      const result = await uploadPlayersFile(tournamentName.trim(), selectedFile);
-      
-      console.log('Upload result:', result);
-      let message = `Player upload: ${result.recordsInserted} of ${result.totalRows} processed.`;
-      if (result.errorCount > 0) message += `\n${result.errorCount} rows had errors.`;
-      toast.success(message, { duration: 5000 });
+      // Only upload players if a file was selected
+      if (selectedFile) {
+        console.log('About to upload players file:', { tournamentName: tournamentName.trim(), selectedFile });
+        console.log('uploadPlayersFile function:', uploadPlayersFile);
+        
+        const result = await uploadPlayersFile(tournamentName.trim(), selectedFile);
+        
+        console.log('Upload result:', result);
+        let message = `Player upload: ${result.recordsInserted} of ${result.totalRows} processed.`;
+        if (result.errorCount > 0) message += `\n${result.errorCount} rows had errors.`;
+        toast.success(message, { duration: 5000 });
+      }
       
       navigate('/');
       
@@ -107,7 +110,7 @@ const AddTournamentPage = () => {
     }
   };
 
-  const isFormValid = tournamentName.trim() && selectedFile && !importing;
+  const isFormValid = tournamentName.trim() && !importing;
 
   return (
     <div className="container">
@@ -179,7 +182,7 @@ const AddTournamentPage = () => {
 
       <div className="form-group">
         <label className="mb-2">
-          Import Master Player Data
+          Import Master Player Data (Optional)
         </label>
         <div 
           style={{ 
@@ -198,7 +201,6 @@ const AddTournamentPage = () => {
             className="hidden"
             id="file-upload"
             disabled={importing}
-            required
           />
           {importing ? (
             <div>
@@ -239,10 +241,10 @@ const AddTournamentPage = () => {
               ) : (
                 <>
                   <p className="tournament-name" style={{ margin: 0, color: '#666666' }}>
-                    Click to select CSV or Excel file (Required)
+                    Click to select CSV or Excel file
                   </p>
                   <p className="tournament-metadata" style={{ margin: 0 }}>
-                    Player data for this tournament
+                    You can add players later via Supabase
                   </p>
                 </>
               )}
