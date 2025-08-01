@@ -10,7 +10,10 @@ console.log('- URL:', SUPABASE_URL);
 console.log('- URL ends with .co:', SUPABASE_URL.endsWith('.supabase.co'));
 console.log('- Key exists:', SUPABASE_ANON_KEY !== 'YOUR_SUPABASE_ANON_KEY' ? 'Yes' : 'No');
 console.log('- Key length:', SUPABASE_ANON_KEY.length);
+console.log('- Key first 20 chars:', SUPABASE_ANON_KEY.substring(0, 20));
+console.log('- Key last 20 chars:', SUPABASE_ANON_KEY.substring(SUPABASE_ANON_KEY.length - 20));
 
+// Test the connection immediately
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // Helper function to handle Supabase errors
