@@ -86,7 +86,7 @@
     useEffect(() => {
       if (!selectedEvent || realtimeConnected) return;
       
-      // Poll every 3 seconds when in offline mode
+      // Poll every 1 second when in offline mode
       const pollInterval = setInterval(async () => {
         if (connectionStatus === 'error') {
           console.log('Polling for updates (offline mode)');
@@ -98,7 +98,7 @@
             console.error('Polling error:', error);
           }
         }
-      }, 3000);
+      }, 1000);
       
       return () => clearInterval(pollInterval);
     }, [selectedEvent, realtimeConnected, connectionStatus, registrationsApi, playersApi, disabledTablesApi]);
