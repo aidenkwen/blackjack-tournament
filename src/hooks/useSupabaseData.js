@@ -838,6 +838,7 @@ export const useDisabledTables = (selectedEvent) => {
         tableMap[key].push(table.table_number);
       });
       
+      console.log('Loaded disabled tables:', tableMap);
       setDisabledTables(tableMap);
       return tableMap;
     } catch (err) {
@@ -911,6 +912,7 @@ export const useDisabledTables = (selectedEvent) => {
     disabledTables,
     setDisabledTables,
     updateDisabledTables,
+    loadDisabledTables,
     loading,
     error
   };

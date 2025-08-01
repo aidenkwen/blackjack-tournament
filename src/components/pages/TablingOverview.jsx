@@ -1,5 +1,6 @@
 // Updated TablingOverview with actual times
 import React, { useState, useEffect, useCallback } from 'react';
+import { useTournamentContext } from '../../context/TournamentContext';
 
 const TablingOverview = ({ 
   tournament, 
@@ -7,6 +8,7 @@ const TablingOverview = ({
   globalDisabledTables,
   setGlobalDisabledTables
 }) => {
+  const { selectedEvent } = useTournamentContext();
   const rounds = [
     { key: 'round1', name: 'Round 1', timeSlots: 6 },
     { key: 'rebuy1', name: 'Rebuy 1', timeSlots: 2 },
@@ -88,9 +90,21 @@ const TablingOverview = ({
     
     // Update the database
     try {
+      console.log('Updating disabled tables:', {
+        tournament: tournament.name,
+        round: selectedRound,
+        timeSlot: selectedTimeSlot,
+        tables: newDisabledTables
+      });
       await setGlobalDisabledTables(tournament.name, selectedRound, selectedTimeSlot, newDisabledTables);
+      console.log('Successfully updated disabled tables');
     } catch (error) {
       console.error('Error updating disabled tables:', error);
+      console.error('Error details:', {
+        message: error.message,
+        code: error.code,
+        details: error.details
+      });
       alert('Failed to update table status. Please try again.');
     }
   };
@@ -100,6 +114,12 @@ const TablingOverview = ({
     // Check if table is in the disabled tables array
     const disabledTablesKey = `${tournament.name}_${selectedRound}_${selectedTimeSlot}`;
     const disabledTables = globalDisabledTables[disabledTablesKey] || [];
+    console.log(`Checking if table ${tableNumber} is disabled:`, {
+      key: disabledTablesKey,
+      disabledTables,
+      globalDisabledTables,
+      isDisabled: disabledTables.includes(tableNumber)
+    });
     return disabledTables.includes(tableNumber);
   };
 
