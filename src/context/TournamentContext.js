@@ -15,6 +15,7 @@
     // All the state that was in App.jsx now lives here
     const [selectedEvent, setSelectedEvent] = useState('');
     const [realtimeConnected, setRealtimeConnected] = useState(false);
+    const [connectionStatus, setConnectionStatus] = useState('connecting'); // 'connecting', 'connected', 'error'
 
   // Debug logging for selectedEvent changes
   useEffect(() => {
@@ -101,7 +102,10 @@
         }
 
         const channels = [];
-        setRealtimeConnected(true);
+        let connectionStable = false;
+        
+        // Set initial connecting status
+        setConnectionStatus('connecting');
 
         // 1. Subscribe to registration changes (most important for counter and seating)
         const registrationsChannel = supabase
@@ -133,6 +137,14 @@
             console.log('Registrations subscription status:', status);
             if (status === 'SUBSCRIBED') {
               console.log('Successfully subscribed to registration updates');
+              if (!connectionStable) {
+                connectionStable = true;
+                setRealtimeConnected(true);
+                setConnectionStatus('connected');
+              }
+            } else if (status === 'CHANNEL_ERROR') {
+              setConnectionStatus('error');
+              setRealtimeConnected(false);
             }
           });
         
@@ -185,7 +197,9 @@
         // Cleanup function
         return () => {
           console.log('Cleaning up real-time subscriptions in context');
+          connectionStable = false;
           setRealtimeConnected(false);
+          setConnectionStatus('connecting');
           channels.forEach(channel => {
             supabase.removeChannel(channel);
           });
@@ -216,6 +230,7 @@
       persistentSearchData,
       globalDisabledTables: disabledTablesApi.disabledTables,
       realtimeConnected,
+      connectionStatus,
       
       // Setters
       setSelectedEvent,
