@@ -1,9 +1,11 @@
-// Updated SeatingAssignmentPage with real-time updates
+// Updated SeatingAssignmentPage with coordination features
 import React, { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import { useTournamentContext } from '../../context/TournamentContext';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
+import { useCoordinationNotes } from '../../hooks/useCoordinationNotes';
+import { useSeatHistory } from '../../hooks/useSeatHistory';
 
 const SeatingAssignmentPage = () => {
   const navigate = useNavigate();
@@ -12,18 +14,42 @@ const SeatingAssignmentPage = () => {
     registrations, setRegistrations,
     pendingRegistration, setPendingRegistration,
     setLastRegisteredPlayer,
-    globalDisabledTables // Use from context instead of local state
+    globalDisabledTables, // Use from context instead of local state
+    employee
   } = useTournamentContext();
 
   const [selectedSeat, setSelectedSeat] = useState(null);
   const [confirming, setConfirming] = useState(false);
   const [seatPreferences, setSeatPreferences] = useState([]);
   const [conflictTables, setConflictTables] = useState(new Set());
+  const [tournamentId, setTournamentId] = useState(null);
+  const [coordinationNote, setCoordinationNote] = useState('');
+  
+  // Initialize coordination hooks
+  const { getNote, saveNote } = useCoordinationNotes(tournamentId);
+  const { recordAssignment, undoLastAssignment, lastAssignment, loading: undoLoading } = useSeatHistory(tournamentId);
 
   // Scroll to top when component mounts
   useEffect(() => {
     window.scrollTo(0, 0);
   }, []);
+
+  // Get tournament ID for hooks
+  useEffect(() => {
+    const getTournamentId = async () => {
+      if (!selectedEvent) return;
+      
+      const { data } = await supabase
+        .from('tournaments')
+        .select('id')
+        .eq('name', selectedEvent)
+        .single();
+      
+      if (data) setTournamentId(data.id);
+    };
+    
+    getTournamentId();
+  }, [selectedEvent]);
 
   // Set up real-time subscription for seat updates
   useEffect(() => {
@@ -184,6 +210,14 @@ const SeatingAssignmentPage = () => {
 
   const currentRound = rounds.find(r => r.key === currentPlayerRound);
   const timeSlotName = getTimeSlotName(currentPlayerRound, currentPlayerTimeSlot);
+  
+  // Load coordination note when round/timeslot changes
+  useEffect(() => {
+    if (currentPlayerRound && currentPlayerTimeSlot) {
+      const note = getNote(currentPlayerRound, currentPlayerTimeSlot);
+      setCoordinationNote(note);
+    }
+  }, [currentPlayerRound, currentPlayerTimeSlot, getNote]);
   const getDisabledKey = (round, timeSlot, tableNumber) => `${selectedEvent}-${round}-${timeSlot}-${tableNumber}`;
   const isTableConflicted = (tableNumber) => conflictTables.has(tableNumber);
   const isTableDisabled = (tableNumber) => {
@@ -202,6 +236,32 @@ const SeatingAssignmentPage = () => {
   const isCurrentPlayerSeat = (tableNumber, seatNumber) => {
     const player = getPlayerAtSeat(tableNumber, seatNumber);
     return player && player.playerAccountNumber === currentPlayer.playerAccountNumber;
+  };
+  
+  // Check if player is already seated elsewhere
+  const getPlayerCurrentSeat = () => {
+    const existingSeat = registrations.find(r => 
+      (r.playerAccountNumber === currentPlayer.playerAccountNumber || 
+       r.accountNumber === currentPlayer.playerAccountNumber) &&
+      r.round === currentPlayerRound &&
+      r.timeSlot === currentPlayerTimeSlot &&
+      r.eventName === selectedEvent &&
+      !r.mulligan && !r.isMulligan &&
+      r.tableNumber && r.seatNumber
+    );
+    
+    return existingSeat ? { table: existingSeat.tableNumber, seat: existingSeat.seatNumber } : null;
+  };
+  
+  // Check if player is registered for this round
+  const isPlayerRegistered = () => {
+    return registrations.some(r => 
+      (r.playerAccountNumber === currentPlayer.playerAccountNumber || 
+       r.accountNumber === currentPlayer.playerAccountNumber) &&
+      r.round === currentPlayerRound &&
+      r.eventName === selectedEvent &&
+      !r.mulligan && !r.isMulligan
+    );
   };
 
   const getAvailableSeats = () => {
@@ -330,6 +390,27 @@ const SeatingAssignmentPage = () => {
       
       console.log('setRegistrations completed');
       
+      // Record the assignment for undo functionality
+      if (foundMatch) {
+        const matchingReg = updatedRegistrations.find(reg => 
+          (reg.playerAccountNumber === currentPlayer.playerAccountNumber || 
+           reg.accountNumber === currentPlayer.playerAccountNumber) &&
+          reg.round === currentPlayerRound &&
+          !reg.mulligan && !reg.isMulligan
+        );
+        
+        if (matchingReg && matchingReg.id) {
+          await recordAssignment(
+            matchingReg.id,
+            currentPlayerRound,
+            currentPlayerTimeSlot,
+            null, // No previous seat for new assignments
+            { table: selectedSeat.table, seat: selectedSeat.seat },
+            employee
+          );
+        }
+      }
+      
       // Set lastRegisteredPlayer since seating is complete
       setLastRegisteredPlayer({
         playerAccountNumber: currentPlayer.playerAccountNumber,
@@ -384,6 +465,57 @@ const SeatingAssignmentPage = () => {
         </h1>
       </div>
 
+      {/* Coordination Note Section */}
+      <div style={{ marginBottom: '20px', padding: '16px', backgroundColor: '#f8f9fa', borderRadius: '8px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px' }}>
+          <div style={{ flex: 1 }}>
+            <input
+              type="text"
+              placeholder={`Add coordination note for ${currentRound?.name} - ${timeSlotName} (e.g., "Sarah working on this")`}
+              value={coordinationNote}
+              onChange={(e) => setCoordinationNote(e.target.value)}
+              onBlur={() => saveNote(currentPlayerRound, currentPlayerTimeSlot, coordinationNote, employee)}
+              style={{
+                width: '100%',
+                padding: '8px 12px',
+                fontSize: '14px',
+                border: '1px solid #ddd',
+                borderRadius: '4px',
+                backgroundColor: 'white'
+              }}
+            />
+          </div>
+          <div>
+            <button 
+              onClick={async () => {
+                const result = await undoLastAssignment();
+                if (result?.success) {
+                  const undone = result.undoneAssignment;
+                  if (undone?.registrations) {
+                    toast.success(
+                      `Undid assignment: ${undone.registrations.first_name} ${undone.registrations.last_name} removed from Table ${undone.new_table_number}-${undone.new_seat_number}`,
+                      { icon: '↶' }
+                    );
+                    // Reload registrations to reflect the change
+                    window.location.reload();
+                  }
+                }
+              }}
+              disabled={!lastAssignment || undoLoading}
+              className="btn btn-secondary"
+              style={{ opacity: (!lastAssignment || undoLoading) ? 0.5 : 1 }}
+            >
+              ↶ Undo Last Assignment
+            </button>
+          </div>
+        </div>
+        {coordinationNote && (
+          <div style={{ marginTop: '8px', fontSize: '12px', color: '#666' }}>
+            Note saved: "{coordinationNote}"
+          </div>
+        )}
+      </div>
+
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '8px', marginBottom: '8px' }}>
         <div>
           <div className="player-info-container">
@@ -391,6 +523,44 @@ const SeatingAssignmentPage = () => {
               {currentPlayer.firstName} {currentPlayer.lastName}<span className="account-part">, {currentPlayer.playerAccountNumber}</span>
             </h3>
             <p className="player-metadata">Entry Type: {currentPlayer.entryType}</p>
+            
+            {/* Smart Warnings */}
+            {(() => {
+              const warnings = [];
+              const currentSeat = getPlayerCurrentSeat();
+              const isRegistered = isPlayerRegistered();
+              
+              if (!isRegistered) {
+                warnings.push({
+                  type: 'error',
+                  message: `⚠️ ${currentPlayer.firstName} is not registered for ${currentRound?.name}!`,
+                  color: '#dc3545'
+                });
+              }
+              
+              if (currentSeat) {
+                warnings.push({
+                  type: 'warning',
+                  message: `ℹ️ ${currentPlayer.firstName} is already seated at Table ${currentSeat.table}, Seat ${currentSeat.seat}`,
+                  color: '#0066cc'
+                });
+              }
+              
+              return warnings.map((warning, index) => (
+                <div key={index} style={{ 
+                  marginTop: '8px', 
+                  padding: '8px 12px', 
+                  backgroundColor: warning.color + '15',
+                  border: `1px solid ${warning.color}`,
+                  borderRadius: '4px',
+                  fontSize: '14px',
+                  color: warning.color,
+                  fontWeight: '500'
+                }}>
+                  {warning.message}
+                </div>
+              ));
+            })()}
           </div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
