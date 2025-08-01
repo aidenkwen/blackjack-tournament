@@ -46,12 +46,12 @@ const PlayerSeatEdit = ({
     return slots[slotNumber - 1] || `Slot ${slotNumber}`;
   };
 
-  const getDisabledKey = (round, timeSlot, tableNumber) => `${tournament.name}-${round}-${timeSlot}-${tableNumber}`;
-
   const isTableDisabled = (tableNumber, round, timeSlot) => {
     if (round === 'semifinals' && tableNumber === 6) return true;
-    const key = getDisabledKey(round, timeSlot, tableNumber);
-    return globalDisabledTables[key] || false;
+    // Check if table is in the disabled tables array
+    const disabledTablesKey = `${tournament.name}_${round}_${timeSlot}`;
+    const disabledTables = globalDisabledTables[disabledTablesKey] || [];
+    return disabledTables.includes(tableNumber);
   };
 
   const getFurthestRoundForPlayer = (playerAccountNumber) => {

@@ -61,20 +61,46 @@ const TablingOverview = ({
     );
   };
 
-  const toggleTable = (tableNumber) => {
+  const toggleTable = async (tableNumber) => {
     const hasPlayers = [1, 2, 3, 4, 5, 6].some(seat => getPlayerAtSeat(tableNumber, seat));
     if (hasPlayers) {
       alert('Cannot disable a table with players currently seated.');
       return;
     }
+    
+    // Get current disabled tables for this round/timeslot
     const key = getDisabledKey(selectedRound, selectedTimeSlot, tableNumber);
-    setGlobalDisabledTables(prev => ({ ...prev, [key]: !prev[key] }));
+    const currentlyDisabled = globalDisabledTables[key] || false;
+    
+    // Get all disabled tables for this round/timeslot
+    const disabledTablesKey = `${tournament.name}_${selectedRound}_${selectedTimeSlot}`;
+    const currentDisabledTables = globalDisabledTables[disabledTablesKey] || [];
+    
+    // Toggle the table
+    let newDisabledTables;
+    if (currentlyDisabled) {
+      // Remove from disabled tables
+      newDisabledTables = currentDisabledTables.filter(t => t !== tableNumber);
+    } else {
+      // Add to disabled tables
+      newDisabledTables = [...currentDisabledTables, tableNumber];
+    }
+    
+    // Update the database
+    try {
+      await setGlobalDisabledTables(tournament.name, selectedRound, selectedTimeSlot, newDisabledTables);
+    } catch (error) {
+      console.error('Error updating disabled tables:', error);
+      alert('Failed to update table status. Please try again.');
+    }
   };
 
   const isTableDisabled = (tableNumber) => {
     if (selectedRound === 'semifinals' && tableNumber === 6) return true;
-    const key = getDisabledKey(selectedRound, selectedTimeSlot, tableNumber);
-    return globalDisabledTables[key] || false;
+    // Check if table is in the disabled tables array
+    const disabledTablesKey = `${tournament.name}_${selectedRound}_${selectedTimeSlot}`;
+    const disabledTables = globalDisabledTables[disabledTablesKey] || [];
+    return disabledTables.includes(tableNumber);
   };
 
   return (
