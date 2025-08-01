@@ -1,10 +1,9 @@
-// Updated SeatingAssignmentPage with coordination features
+// Updated SeatingAssignmentPage with undo functionality
 import React, { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import { useTournamentContext } from '../../context/TournamentContext';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
-import { useCoordinationNotes } from '../../hooks/useCoordinationNotes';
 import { useSeatHistory } from '../../hooks/useSeatHistory';
 
 const SeatingAssignmentPage = () => {
@@ -23,10 +22,8 @@ const SeatingAssignmentPage = () => {
   const [seatPreferences, setSeatPreferences] = useState([]);
   const [conflictTables, setConflictTables] = useState(new Set());
   const [tournamentId, setTournamentId] = useState(null);
-  const [coordinationNote, setCoordinationNote] = useState('');
   
-  // Initialize coordination hooks
-  const { getNote, saveNote } = useCoordinationNotes(tournamentId);
+  // Initialize undo hook
   const { recordAssignment, undoLastAssignment, lastAssignment, loading: undoLoading } = useSeatHistory(tournamentId);
 
   // Scroll to top when component mounts
@@ -176,13 +173,6 @@ const SeatingAssignmentPage = () => {
   const currentPlayerTimeSlot = pendingRegistration?.selectedTimeSlot;
   const currentPlayer = pendingRegistration?.player;
 
-  // Load coordination note when round/timeslot changes - must be before early return
-  useEffect(() => {
-    if (currentPlayerRound && currentPlayerTimeSlot) {
-      const note = getNote(currentPlayerRound, currentPlayerTimeSlot);
-      setCoordinationNote(note);
-    }
-  }, [currentPlayerRound, currentPlayerTimeSlot, getNote]);
   
   if (!pendingRegistration) {
     return (
@@ -465,55 +455,29 @@ const SeatingAssignmentPage = () => {
         </h1>
       </div>
 
-      {/* Coordination Note Section */}
-      <div style={{ marginBottom: '20px', padding: '16px', backgroundColor: '#f8f9fa', borderRadius: '8px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px' }}>
-          <div style={{ flex: 1 }}>
-            <input
-              type="text"
-              placeholder={`Add coordination note for ${currentRound?.name} - ${timeSlotName} (e.g., "Sarah working on this")`}
-              value={coordinationNote}
-              onChange={(e) => setCoordinationNote(e.target.value)}
-              onBlur={() => saveNote(currentPlayerRound, currentPlayerTimeSlot, coordinationNote, employee)}
-              style={{
-                width: '100%',
-                padding: '8px 12px',
-                fontSize: '14px',
-                border: '1px solid #ddd',
-                borderRadius: '4px',
-                backgroundColor: 'white'
-              }}
-            />
-          </div>
-          <div>
-            <button 
-              onClick={async () => {
-                const result = await undoLastAssignment();
-                if (result?.success) {
-                  const undone = result.undoneAssignment;
-                  if (undone?.registrations) {
-                    toast.success(
-                      `Undid assignment: ${undone.registrations.first_name} ${undone.registrations.last_name} removed from Table ${undone.new_table_number}-${undone.new_seat_number}`,
-                      { icon: '↶' }
-                    );
-                    // Reload registrations to reflect the change
-                    window.location.reload();
-                  }
-                }
-              }}
-              disabled={!lastAssignment || undoLoading}
-              className="btn btn-secondary"
-              style={{ opacity: (!lastAssignment || undoLoading) ? 0.5 : 1 }}
-            >
-              ↶ Undo Last Assignment
-            </button>
-          </div>
-        </div>
-        {coordinationNote && (
-          <div style={{ marginTop: '8px', fontSize: '12px', color: '#666' }}>
-            Note saved: "{coordinationNote}"
-          </div>
-        )}
+      {/* Undo Section */}
+      <div style={{ marginBottom: '20px', display: 'flex', justifyContent: 'flex-end' }}>
+        <button 
+          onClick={async () => {
+            const result = await undoLastAssignment();
+            if (result?.success) {
+              const undone = result.undoneAssignment;
+              if (undone?.registrations) {
+                toast.success(
+                  `Undid assignment: ${undone.registrations.first_name} ${undone.registrations.last_name} removed from Table ${undone.new_table_number}-${undone.new_seat_number}`,
+                  { icon: '↶' }
+                );
+                // Reload registrations to reflect the change
+                window.location.reload();
+              }
+            }
+          }}
+          disabled={!lastAssignment || undoLoading}
+          className="btn btn-secondary"
+          style={{ opacity: (!lastAssignment || undoLoading) ? 0.5 : 1 }}
+        >
+          ↶ Undo Last Assignment
+        </button>
       </div>
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '8px', marginBottom: '8px' }}>
