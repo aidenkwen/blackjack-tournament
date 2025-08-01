@@ -90,10 +90,8 @@ const ExportPage = () => {
       const deduplicatedRegistrations = deduplicateRegistrations(roundRegistrations);
       
       dataToExport = deduplicatedRegistrations.map((r) => {
-        console.log('Exporting registration:', r); // Debug log
-        
         // Determine if this is a mulligan
-        const isMulligan = r.mulligan || r.isMulligan || false;
+        const isMulligan = r.isMulligan === true;
         
         return {
           PlayerAccountNumber: r.playerAccountNumber || r.accountNumber,
@@ -162,10 +160,8 @@ const ExportPage = () => {
       const deduplicatedRegistrations = deduplicateRegistrations(roundRegistrations);
       
       combinedData.push(...deduplicatedRegistrations.map((reg) => {
-        console.log('Exporting combined registration:', reg); // Debug log
-        
         // Determine if this is a mulligan
-        const isMulligan = reg.mulligan || reg.isMulligan || false;
+        const isMulligan = reg.isMulligan === true;
         
         return {
           PlayerAccountNumber: reg.playerAccountNumber || reg.accountNumber,
