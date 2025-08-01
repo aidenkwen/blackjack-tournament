@@ -1,10 +1,9 @@
-// Updated SeatingAssignmentPage with undo functionality
+// Updated SeatingAssignmentPage with smart warnings
 import React, { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import { useTournamentContext } from '../../context/TournamentContext';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
-import { useSeatHistory } from '../../hooks/useSeatHistory';
 
 const SeatingAssignmentPage = () => {
   const navigate = useNavigate();
@@ -22,9 +21,6 @@ const SeatingAssignmentPage = () => {
   const [seatPreferences, setSeatPreferences] = useState([]);
   const [conflictTables, setConflictTables] = useState(new Set());
   const [tournamentId, setTournamentId] = useState(null);
-  
-  // Initialize undo hook
-  const { recordAssignment, undoLastAssignment, lastAssignment, loading: undoLoading } = useSeatHistory(tournamentId);
 
   // Scroll to top when component mounts
   useEffect(() => {
@@ -366,19 +362,6 @@ const SeatingAssignmentPage = () => {
       
       console.log('setRegistrations completed');
       
-      // Record the assignment for undo functionality
-      const mainRegistration = registrationsWithSeating.find(reg => !reg.isMulligan);
-      if (mainRegistration && mainRegistration.id) {
-        await recordAssignment(
-          mainRegistration.id,
-          currentPlayerRound,
-          currentPlayerTimeSlot,
-          null, // No previous seat for new assignments
-          { table: selectedSeat.table, seat: selectedSeat.seat },
-          employee
-        );
-      }
-      
       // Set lastRegisteredPlayer since seating is complete
       setLastRegisteredPlayer({
         playerAccountNumber: currentPlayer.playerAccountNumber,
@@ -433,30 +416,6 @@ const SeatingAssignmentPage = () => {
         </h1>
       </div>
 
-      {/* Undo Section */}
-      <div style={{ marginBottom: '20px', display: 'flex', justifyContent: 'flex-end' }}>
-        <button 
-          onClick={async () => {
-            const result = await undoLastAssignment();
-            if (result?.success) {
-              const undone = result.undoneAssignment;
-              if (undone?.registrations) {
-                toast.success(
-                  `Undid assignment: ${undone.registrations.first_name} ${undone.registrations.last_name} removed from Table ${undone.new_table_number}-${undone.new_seat_number}`,
-                  { icon: '↶' }
-                );
-                // Reload registrations to reflect the change
-                window.location.reload();
-              }
-            }
-          }}
-          disabled={!lastAssignment || undoLoading}
-          className="btn btn-secondary"
-          style={{ opacity: (!lastAssignment || undoLoading) ? 0.5 : 1 }}
-        >
-          ↶ Undo Last Assignment
-        </button>
-      </div>
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '8px', marginBottom: '8px' }}>
         <div>
