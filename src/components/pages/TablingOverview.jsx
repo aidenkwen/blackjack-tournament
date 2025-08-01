@@ -114,12 +114,6 @@ const TablingOverview = ({
     // Check if table is in the disabled tables array
     const disabledTablesKey = `${tournament.name}_${selectedRound}_${selectedTimeSlot}`;
     const disabledTables = globalDisabledTables[disabledTablesKey] || [];
-    console.log(`Checking if table ${tableNumber} is disabled:`, {
-      key: disabledTablesKey,
-      disabledTables,
-      globalDisabledTables,
-      isDisabled: disabledTables.includes(tableNumber)
-    });
     return disabledTables.includes(tableNumber);
   };
 

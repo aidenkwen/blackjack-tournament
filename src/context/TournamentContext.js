@@ -89,7 +89,6 @@
       // Poll every 1 second when in offline mode
       const pollInterval = setInterval(async () => {
         if (connectionStatus === 'error') {
-          console.log('Polling for updates (offline mode)');
           try {
             await registrationsApi.loadRegistrations(selectedEvent);
             await playersApi.loadPlayers(selectedEvent);

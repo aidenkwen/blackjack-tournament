@@ -437,6 +437,7 @@ export const useTournamentPlayers = (selectedEvent) => {
     getCurrentTournamentPlayers,
     setCurrentTournamentPlayers,
     uploadPlayersFile,
+    loadPlayers,
     loading,
     error
   };
