@@ -8,7 +8,8 @@ const TablingOverview = ({
   globalDisabledTables,
   setGlobalDisabledTables
 }) => {
-  const { selectedEvent } = useTournamentContext();
+  const { selectedEvent, tablingSelectedRound, setTablingSelectedRound, 
+          tablingSelectedTimeSlot, setTablingSelectedTimeSlot } = useTournamentContext();
   const rounds = [
     { key: 'round1', name: 'Round 1', timeSlots: 6 },
     { key: 'rebuy1', name: 'Rebuy 1', timeSlots: 2 },
@@ -35,29 +36,25 @@ const TablingOverview = ({
     return slots[slotNumber - 1] || `Slot ${slotNumber}`;
   };
 
-  const getMostRecentRound = useCallback(() => {
-    if (!registrations || registrations.length === 0) return 'round1';
-    const sortedRegistrations = [...registrations].filter(r => r.registrationDate).sort((a, b) => new Date(b.registrationDate) - new Date(a.registrationDate));
-    return sortedRegistrations.length > 0 ? sortedRegistrations[0].round || 'round1' : 'round1';
-  }, [registrations]);
-
-  const [selectedRound, setSelectedRound] = useState(getMostRecentRound);
-  const [selectedTimeSlot, setSelectedTimeSlot] = useState(1);
-
+  // Initialize from context on first load
   useEffect(() => {
-    setSelectedRound(getMostRecentRound());
-    setSelectedTimeSlot(1);
-  }, [getMostRecentRound]);
+    if (!tablingSelectedRound && registrations && registrations.length > 0) {
+      const sortedRegistrations = [...registrations].filter(r => r.registrationDate).sort((a, b) => new Date(b.registrationDate) - new Date(a.registrationDate));
+      const mostRecentRound = sortedRegistrations.length > 0 ? sortedRegistrations[0].round || 'round1' : 'round1';
+      setTablingSelectedRound(mostRecentRound);
+      setTablingSelectedTimeSlot(1);
+    }
+  }, [registrations, tablingSelectedRound, setTablingSelectedRound, setTablingSelectedTimeSlot]);
 
-  const currentRound = rounds.find(r => r.key === selectedRound);
+  const currentRound = rounds.find(r => r.key === tablingSelectedRound);
   const availableTimeSlots = Array.from({ length: currentRound?.timeSlots || 1 }, (_, i) => i + 1);
 
   const getDisabledKey = (round, timeSlot, tableNumber) => `${tournament.name}-${round}-${timeSlot}-${tableNumber}`;
 
   const getPlayerAtSeat = (tableNumber, seatNumber) => {
     return registrations.find(r =>
-      r.round === selectedRound &&
-      r.timeSlot === selectedTimeSlot &&
+      r.round === tablingSelectedRound &&
+      r.timeSlot === tablingSelectedTimeSlot &&
       r.tableNumber === tableNumber &&
       r.seatNumber === seatNumber
     );
@@ -71,11 +68,11 @@ const TablingOverview = ({
     }
     
     // Get current disabled tables for this round/timeslot
-    const key = getDisabledKey(selectedRound, selectedTimeSlot, tableNumber);
+    const key = getDisabledKey(tablingSelectedRound, tablingSelectedTimeSlot, tableNumber);
     const currentlyDisabled = globalDisabledTables[key] || false;
     
     // Get all disabled tables for this round/timeslot
-    const disabledTablesKey = `${tournament.name}_${selectedRound}_${selectedTimeSlot}`;
+    const disabledTablesKey = `${tournament.name}_${tablingSelectedRound}_${tablingSelectedTimeSlot}`;
     const currentDisabledTables = globalDisabledTables[disabledTablesKey] || [];
     
     // Toggle the table
@@ -92,11 +89,11 @@ const TablingOverview = ({
     try {
       console.log('Updating disabled tables:', {
         tournament: tournament.name,
-        round: selectedRound,
-        timeSlot: selectedTimeSlot,
+        round: tablingSelectedRound,
+        timeSlot: tablingSelectedTimeSlot,
         tables: newDisabledTables
       });
-      await setGlobalDisabledTables(tournament.name, selectedRound, selectedTimeSlot, newDisabledTables);
+      await setGlobalDisabledTables(tournament.name, tablingSelectedRound, tablingSelectedTimeSlot, newDisabledTables);
       console.log('Successfully updated disabled tables');
     } catch (error) {
       console.error('Error updating disabled tables:', error);
@@ -110,9 +107,9 @@ const TablingOverview = ({
   };
 
   const isTableDisabled = (tableNumber) => {
-    if (selectedRound === 'semifinals' && tableNumber === 6) return true;
+    if (tablingSelectedRound === 'semifinals' && tableNumber === 6) return true;
     // Check if table is in the disabled tables array
-    const disabledTablesKey = `${tournament.name}_${selectedRound}_${selectedTimeSlot}`;
+    const disabledTablesKey = `${tournament.name}_${tablingSelectedRound}_${tablingSelectedTimeSlot}`;
     const disabledTables = globalDisabledTables[disabledTablesKey] || [];
     return disabledTables.includes(tableNumber);
   };
@@ -123,10 +120,10 @@ const TablingOverview = ({
         <div className="form-group" style={{ flex: 1 }}>
           <label className="mb-2">Round</label>
           <select
-            value={selectedRound}
+            value={tablingSelectedRound}
             onChange={(e) => {
-              setSelectedRound(e.target.value);
-              setSelectedTimeSlot(1);
+              setTablingSelectedRound(e.target.value);
+              setTablingSelectedTimeSlot(1);
             }}
             className="select-field"
           >
@@ -140,13 +137,13 @@ const TablingOverview = ({
         <div className="form-group" style={{ flex: 1 }}>
           <label className="mb-2">Time Slot</label>
           <select
-            value={selectedTimeSlot}
-            onChange={(e) => setSelectedTimeSlot(parseInt(e.target.value, 10))}
+            value={tablingSelectedTimeSlot}
+            onChange={(e) => setTablingSelectedTimeSlot(parseInt(e.target.value, 10))}
             className="select-field"
           >
             {availableTimeSlots.map(slot => (
               <option key={slot} value={slot}>
-                {getTimeSlotName(selectedRound, slot)}
+                {getTimeSlotName(tablingSelectedRound, slot)}
               </option>
             ))}
           </select>
@@ -156,7 +153,7 @@ const TablingOverview = ({
       <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
         {[1, 2, 3, 4, 5, 6].map(tableNumber => {
           const isDisabled = isTableDisabled(tableNumber);
-          const isPermanentlyDisabled = selectedRound === 'semifinals' && tableNumber === 6;
+          const isPermanentlyDisabled = tablingSelectedRound === 'semifinals' && tableNumber === 6;
 
           const switchTrackStyle = {
             position: 'relative', width: '50px', height: '26px',

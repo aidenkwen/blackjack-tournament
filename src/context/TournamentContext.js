@@ -35,6 +35,10 @@
     // Persistent round preferences that survive navigation
     const [lastRoundPreferences, setLastRoundPreferences] = useState({});
     
+    // State for tabling page dropdowns
+    const [tablingSelectedRound, setTablingSelectedRound] = useState('round1');
+    const [tablingSelectedTimeSlot, setTablingSelectedTimeSlot] = useState(1);
+    
     // FIXED: Additional state for preserving search and form data across navigation
     const [persistentSearchData, setPersistentSearchData] = useState({
       searchAccount: '',
@@ -69,6 +73,8 @@
       setLastSelectedRound('round1');
       setLastSelectedTimeSlot(1);
       setLastRoundPreferences({});
+      setTablingSelectedRound('round1');
+      setTablingSelectedTimeSlot(1);
       clearSearchState();
     }, [clearSearchState]);
 
@@ -320,6 +326,8 @@
       globalDisabledTables: disabledTablesApi.disabledTables,
       realtimeConnected,
       connectionStatus,
+      tablingSelectedRound,
+      tablingSelectedTimeSlot,
       
       // Setters
       setSelectedEvent,
@@ -331,6 +339,8 @@
       setLastSelectedTimeSlot,
       setLastRoundPreferences,
       setGlobalDisabledTables: disabledTablesApi.updateDisabledTables,
+      setTablingSelectedRound,
+      setTablingSelectedTimeSlot,
 
       // Search state management functions
       saveSearchState,
@@ -364,7 +374,8 @@
       tournamentsApi.loading, tournamentsApi.error, tournamentsApi.addTournament, 
       tournamentsApi.deleteTournament, playersApi, registrationsApi.registrations, 
       registrationsApi.setRegistrations, registrationsApi.addRegistration, 
-      registrationsApi.loading, registrationsApi.error, disabledTablesApi.updateDisabledTables
+      registrationsApi.loading, registrationsApi.error, disabledTablesApi.updateDisabledTables,
+      tablingSelectedRound, tablingSelectedTimeSlot, realtimeConnected, connectionStatus
     ]);
 
     return (
