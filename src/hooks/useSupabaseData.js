@@ -580,6 +580,11 @@ export const useRegistrations = (selectedEvent) => {
         if (existingReg) {
           // Update existing registration
           console.log('Updating existing registration:', existingReg.id);
+          console.log('Seating data being updated:', {
+            tableNumber: reg.tableNumber,
+            seatNumber: reg.seatNumber,
+            timeSlot: reg.timeSlot
+          });
           const { error: updateError } = await supabase
             .from('registrations')
             .update({
@@ -605,6 +610,11 @@ export const useRegistrations = (selectedEvent) => {
         } else {
           // Insert new registration
           console.log('Inserting new registration for:', reg.firstName, reg.lastName);
+          console.log('Seating data being inserted:', {
+            tableNumber: reg.tableNumber,
+            seatNumber: reg.seatNumber,
+            timeSlot: reg.timeSlot
+          });
           const { error: insertError } = await supabase
             .from('registrations')
             .insert([{
