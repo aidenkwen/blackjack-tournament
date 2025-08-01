@@ -443,7 +443,13 @@ export const useRegistrations = (selectedEvent) => {
         entryType: reg.entry_type,
         registeredBy: reg.registered_by,
         createdAt: reg.created_at,
-        playerAccountNumber: reg.account_number // Add this for consistency
+        playerAccountNumber: reg.account_number, // Add this for consistency
+        paymentType: reg.payment_type,
+        paymentAmount: reg.payment_amount,
+        paymentType2: reg.payment_type2,
+        paymentAmount2: reg.payment_amount2,
+        comments: reg.comments,
+        isMulligan: reg.mulligan
       }));
       
       setRegistrations(transformedData);
@@ -500,10 +506,15 @@ export const useRegistrations = (selectedEvent) => {
           table_number: registration.tableNumber,
           seat_number: registration.seatNumber,
           host: registration.host || null,
-          mulligan: registration.mulligan || false,
+          mulligan: registration.mulligan || registration.isMulligan || false,
           last_player: registration.lastPlayer || false,
           entry_type: registration.entryType || 'PAY',
-          registered_by: registration.registeredBy || null
+          registered_by: registration.registeredBy || null,
+          payment_type: registration.paymentType || null,
+          payment_amount: registration.paymentAmount || 0,
+          payment_type2: registration.paymentType2 || null,
+          payment_amount2: registration.paymentAmount2 || 0,
+          comments: registration.comments || registration.comment || null
         }])
         .select()
         .single();
@@ -521,7 +532,13 @@ export const useRegistrations = (selectedEvent) => {
         timeSlot: data.time_slot,
         entryType: data.entry_type,
         registeredBy: data.registered_by,
-        createdAt: data.created_at
+        createdAt: data.created_at,
+        paymentType: data.payment_type,
+        paymentAmount: data.payment_amount,
+        paymentType2: data.payment_type2,
+        paymentAmount2: data.payment_amount2,
+        comments: data.comments,
+        isMulligan: data.mulligan
       };
       
       setRegistrations(prev => [...prev, transformedData]);
@@ -601,7 +618,12 @@ export const useRegistrations = (selectedEvent) => {
               mulligan: reg.isMulligan || reg.mulligan || false,
               last_player: reg.lastPlayer || false,
               entry_type: reg.entryType || 'PAY',
-              registered_by: reg.employee || reg.registeredBy
+              registered_by: reg.employee || reg.registeredBy,
+              payment_type: reg.paymentType,
+              payment_amount: reg.paymentAmount || 0,
+              payment_type2: reg.paymentType2,
+              payment_amount2: reg.paymentAmount2 || 0,
+              comments: reg.comments || reg.comment
             })
             .eq('id', existingReg.id);
           
@@ -633,7 +655,12 @@ export const useRegistrations = (selectedEvent) => {
               mulligan: reg.isMulligan || reg.mulligan || false,
               last_player: reg.lastPlayer || false,
               entry_type: reg.entryType || 'PAY',
-              registered_by: reg.employee || reg.registeredBy
+              registered_by: reg.employee || reg.registeredBy,
+              payment_type: reg.paymentType,
+              payment_amount: reg.paymentAmount || 0,
+              payment_type2: reg.paymentType2,
+              payment_amount2: reg.paymentAmount2 || 0,
+              comments: reg.comments || reg.comment
             }]);
           
           if (insertError) {

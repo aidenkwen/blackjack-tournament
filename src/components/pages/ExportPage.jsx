@@ -91,22 +91,28 @@ const ExportPage = () => {
       
       dataToExport = deduplicatedRegistrations.map((r) => {
         console.log('Exporting registration:', r); // Debug log
+        
+        // Determine if this is a mulligan
+        const isMulligan = r.mulligan || r.isMulligan || false;
+        
         return {
-          PlayerAccountNumber: r.playerAccountNumber,
+          PlayerAccountNumber: r.playerAccountNumber || r.accountNumber,
           FirstName: r.firstName,
           LastName: r.lastName,
           EntryType: r.entryType || 'PAY',
-          EventType: r.eventType || 'PAY', // Simple: PAY, COMP, or Mulligan
+          EventType: isMulligan ? 'Mulligan' : (r.entryType || 'PAY'),
           PaymentType: r.paymentType || '',
           PaymentAmount: r.paymentAmount || 0,
           PaymentType2: r.paymentType2 || '',
           PaymentAmount2: r.paymentAmount2 || 0,
-          RegistrationDate: r.registrationDate,
+          RegistrationDate: r.createdAt || r.registrationDate || '',
           Host: r.host || '',
-          Comment: r.comment || '',
-          Employee: r.employee,
+          Comment: r.comments || r.comment || '',
+          Employee: r.registeredBy || r.employee || employee,
           Round: r.round,
-          TimeSlot: r.timeSlot ? getTimeSlotName(r.round, r.timeSlot) : '' // FIXED: Convert to time slot name
+          TimeSlot: r.timeSlot ? getTimeSlotName(r.round, r.timeSlot) : '',
+          TableNumber: r.tableNumber || '',
+          SeatNumber: r.seatNumber || ''
         };
       });
 
@@ -157,22 +163,28 @@ const ExportPage = () => {
       
       combinedData.push(...deduplicatedRegistrations.map((reg) => {
         console.log('Exporting combined registration:', reg); // Debug log
+        
+        // Determine if this is a mulligan
+        const isMulligan = reg.mulligan || reg.isMulligan || false;
+        
         return {
-          PlayerAccountNumber: reg.playerAccountNumber,
+          PlayerAccountNumber: reg.playerAccountNumber || reg.accountNumber,
           FirstName: reg.firstName,
           LastName: reg.lastName,
           EntryType: reg.entryType || 'PAY',
-          EventType: reg.eventType || 'PAY', // Simple: PAY, COMP, or Mulligan
+          EventType: isMulligan ? 'Mulligan' : (reg.entryType || 'PAY'),
           PaymentType: reg.paymentType || '',
           PaymentAmount: reg.paymentAmount || 0,
           PaymentType2: reg.paymentType2 || '',
           PaymentAmount2: reg.paymentAmount2 || 0,
-          RegistrationDate: reg.registrationDate,
+          RegistrationDate: reg.createdAt || reg.registrationDate || '',
           Host: reg.host || '',
-          Comment: reg.comment || '',
-          Employee: reg.employee,
+          Comment: reg.comments || reg.comment || '',
+          Employee: reg.registeredBy || reg.employee || employee,
           Round: reg.round,
-          TimeSlot: reg.timeSlot ? getTimeSlotName(reg.round, reg.timeSlot) : '' // FIXED: Convert to time slot name
+          TimeSlot: reg.timeSlot ? getTimeSlotName(reg.round, reg.timeSlot) : '',
+          TableNumber: reg.tableNumber || '',
+          SeatNumber: reg.seatNumber || ''
         };
       }));
 
